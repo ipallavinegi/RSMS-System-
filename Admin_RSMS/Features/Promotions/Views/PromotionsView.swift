@@ -1,130 +1,239 @@
 import SwiftUI
 
 struct PromotionsView: View {
+    
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dismiss) private var dismiss
     
-    @State private var promos: [Promotion] = PromotionSampleData.promos
-    @State private var selectedFilter: PromotionStatus = .all
+    @StateObject private var service = PromotionService.shared
+    
     @State private var searchText = ""
-
-    private let cardWidth: CGFloat = 300
-
-    private var filteredPromos: [Promotion] {
-        let base = selectedFilter == .all ? promos : promos.filter { $0.status == selectedFilter.rawValue }
-        guard !searchText.isEmpty else { return base }
-        return base.filter {
-            $0.title.localizedCaseInsensitiveContains(searchText) ||
-            $0.subtitle.localizedCaseInsensitiveContains(searchText)
+    @State private var showingAddPromotion = false
+    @State private var editingPromotion: AdminPromotion?
+    
+    private let cardWidth: CGFloat = 320
+    
+    private var filteredPromotions: [AdminPromotion] {
+        
+        guard !searchText.isEmpty else {
+            return service.promotions
+        }
+        
+        return service.promotions.filter {
+            $0.promotionName.localizedCaseInsensitiveContains(searchText)
+            ||
+            ($0.description?.localizedCaseInsensitiveContains(searchText) ?? false)
         }
     }
-
+    
     var body: some View {
+        
         VStack(spacing: 0) {
+            
             headerView
-
-            filterBar
-
+            
             Group {
-                if filteredPromos.isEmpty {
+                
+                if service.isLoading {
+                    
+                    ProgressView("Loading Promotions...")
+                        .frame(maxWidth: .infinity,
+                               maxHeight: .infinity)
+                    
+                } else if filteredPromotions.isEmpty {
+                    
                     ContentUnavailableView(
-                        searchText.isEmpty ? "No \(selectedFilter.rawValue.lowercased()) promotions" : "No results for \"\(searchText)\"",
-                        systemImage: "tag"
+                        "No Promotions Yet",
+                        systemImage: "tag",
+                        description: Text(
+                            "Create your first promotional campaign."
+                        )
                     )
+                    
                 } else {
+                    
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
-                            ForEach(filteredPromos) { promotion in
-                                PromoCard(promotion: promotion)
-                                    .frame(width: cardWidth)
+                        
+                        LazyVGrid(
+                            columns: [
+                                GridItem(
+                                    .adaptive(
+                                        minimum: cardWidth,
+                                        maximum: cardWidth
+                                    ),
+                                    spacing: 20,
+                                    alignment: .top
+                                )
+                            ],
+                            alignment: .leading,
+                            spacing: 20
+                        ) {
+                            
+                            ForEach(filteredPromotions) { promotion in
+                                
+                                PromoCard(
+                                    promotion: promotion,
+                                    onTap: {
+                                        editingPromotion = promotion
+                                    }
+                                )
+                                .frame(width: cardWidth)
                             }
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(
+                            .horizontal,
+                            sizeClass == .compact ? 16 : 32
+                        )
                         .padding(.top, 24)
                         .padding(.bottom, 100)
                     }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity
+            )
+            .background(
+                Color(uiColor: .systemGroupedBackground)
+            )
         }
         .navigationTitle("Promotions")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .statusBarHidden()
+        .task {
+            await service.fetchPromotions()
+        }
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
+            
+            ToolbarItem(
+                placement: .navigationBarLeading
+            ) {
+                
+                Button {
+                    dismiss()
+                } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(
+                            .system(
+                                size: 18,
+                                weight: .semibold
+                            )
+                        )
                         .foregroundColor(.primary)
                 }
             }
         }
+        .sheet(
+            isPresented: $showingAddPromotion
+        ) {
+            
+            AddPromotionView(
+                onDismiss: {
+                    showingAddPromotion = false
+                },
+                onSaved: { _ in
+                    
+                    Task {
+                        await service.fetchPromotions()
+                    }
+                }
+            )
+        }
+        .sheet(
+            item: $editingPromotion
+        ) { promotion in
+            
+            AddPromotionView(
+                editingPromotion: promotion,
+                onDismiss: {
+                    editingPromotion = nil
+                },
+                onSaved: { _ in
+                    
+                    Task {
+                        await service.fetchPromotions()
+                    }
+                }
+            )
+        }
     }
-
+    
+    // MARK: - Header
+    
     private var headerView: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        
+        HStack(spacing: 12) {
+            
             HStack(spacing: 12) {
+                
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                TextField("Search campaigns or keywords...", text: $searchText)
-                    .textFieldStyle(.plain)
+                
+                TextField(
+                    "Search promotions...",
+                    text: $searchText
+                )
+                .textFieldStyle(.plain)
+                
                 if !searchText.isEmpty {
+                    
                     Button {
                         searchText = ""
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                        Image(
+                            systemName: "xmark.circle.fill"
+                        )
+                        .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .background(
+                Color(
+                    uiColor:
+                        .secondarySystemGroupedBackground
+                )
+            )
             .clipShape(Capsule())
-        }
-        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
-        .padding(.top, 24)
-        .padding(.bottom, 16)
-        .background(Color(uiColor: .systemGroupedBackground))
-    }
-
-    private var filterBar: some View {
-        HStack(spacing: 10) {
-            ForEach(PromotionStatus.allCases) { filter in
-                filterPill(filter)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
-        .padding(.bottom, 14)
-        .background(Color(uiColor: .systemGroupedBackground))
-        .overlay(Divider(), alignment: .bottom)
-    }
-
-    @ViewBuilder
-    private func filterPill(_ filter: PromotionStatus) -> some View {
-        let isSelected = selectedFilter == filter
-        
-        // Compute count dynamically
-        let count = filter == .all ? promos.count : promos.filter { $0.status == filter.rawValue }.count
-
-        Button {
-            withAnimation { selectedFilter = filter }
-        } label: {
-            Text("\(filter.rawValue) (\(count))")
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(isSelected ? .white : .primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            
+            Button {
+                showingAddPromotion = true
+            } label: {
+                
+                HStack(spacing: 8) {
+                    
+                    Image(systemName: "plus.circle.fill")
+                    
+                    Text("Create")
+                }
+                .font(
+                    .system(
+                        size: 15,
+                        weight: .semibold
+                    )
+                )
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(
-                    isSelected ? Color.accentColor : Color(uiColor: .secondarySystemGroupedBackground),
+                    Color.blue,
                     in: Capsule()
                 )
+            }
         }
-        .buttonStyle(.plain)
+        .padding(
+            .horizontal,
+            sizeClass == .compact ? 16 : 32
+        )
+        .padding(.top, 24)
+        .padding(.bottom, 16)
+        .background(
+            Color(uiColor: .systemGroupedBackground)
+        )
     }
 }

@@ -102,7 +102,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var inventoryProductsCount: Int = 1240
     @Published var staffingManagersCount: Int = 45
     @Published var staffingManagersTotal: Int = 50
-    @Published var marketingPromosCount: Int = 6
+    @Published var marketingPromosCount: Int = 0
 
     // Detailed metrics
     @Published var retailHealthScores: [StoreHealthScore] = []
@@ -129,6 +129,10 @@ final class DashboardViewModel: ObservableObject {
             usingSampleData = true
             errorMessage = "Showing demo data until the dashboard tables are available."
         }
+
+        // Live count of currently-running promotions, from the same
+        // service the Promotions screen uses (no more hardcoded mock value).
+        await PromotionService.shared.fetchPromotions()
 
         rebuild()
         isLoading = false
@@ -213,8 +217,12 @@ final class DashboardViewModel: ObservableObject {
         let dbManagersCount = data.users.count // simple fallback
         staffingManagersCount = dbManagersCount > 3 ? dbManagersCount : 45
         staffingManagersTotal = 50
-        
-        marketingPromosCount = 6
+
+        // Live campaigns = promotions whose schedule currently overlaps today,
+        // pulled straight from PromotionService (same source as the Promotions screen).
+        marketingPromosCount = PromotionService.shared.promotions
+            .filter { $0.promotionState == .active }
+            .count
 
         // High fidelity components: Health Scores
         retailHealthScores = [
