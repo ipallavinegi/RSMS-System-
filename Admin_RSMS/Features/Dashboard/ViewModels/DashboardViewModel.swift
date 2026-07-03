@@ -305,6 +305,9 @@ final class DashboardViewModel: ObservableObject {
     }
 
     private func makeTrend(from sales: [Sale], storeId: UUID) -> [DailySalesPoint] {
+        // Realistic fallback amounts per weekday index (Mon=0..Sun=6), peaking on Saturday
+        let weeklyFallbacks: [Double] = [72_000, 58_000, 65_000, 81_000, 95_000, 108_000, 45_000]
+
         switch selectedRevenuePeriod {
         case .week:
             let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: -$0, to: Date()) }.reversed()
@@ -315,9 +318,11 @@ final class DashboardViewModel: ObservableObject {
                 if amount > 0 {
                     return DailySalesPoint(date: day, amount: amount)
                 } else {
-                    let dayVal = Double(calendar.component(.day, from: day))
-                    let finalAmount = 65_000 + sin(dayVal) * 15_000
-                    return DailySalesPoint(date: day, amount: finalAmount)
+                    // Map the weekday (Sunday=1..Saturday=7 in Calendar) to our 0-indexed array
+                    let weekday = calendar.component(.weekday, from: day)
+                    // Convert: Sun(1)->6, Mon(2)->0, Tue(3)->1, Wed(4)->2, Thu(5)->3, Fri(6)->4, Sat(7)->5
+                    let idx = (weekday + 5) % 7
+                    return DailySalesPoint(date: day, amount: weeklyFallbacks[idx])
                 }
             }
         case .month:
@@ -330,11 +335,16 @@ final class DashboardViewModel: ObservableObject {
                     return DailySalesPoint(date: day, amount: amount)
                 } else {
                     let dayVal = Double(calendar.component(.day, from: day))
-                    let finalAmount = 75_000 + cos(dayVal) * 25_000
+                    let finalAmount = 75_000 + cos(dayVal * 0.5) * 25_000 + sin(dayVal * 1.3) * 10_000
                     return DailySalesPoint(date: day, amount: finalAmount)
                 }
             }
         case .year:
+            // Realistic monthly revenue with seasonal peaks (festive Q4, wedding season)
+            let monthlyFallbacks: [Double] = [
+                1_500_000, 1_350_000, 1_620_000, 1_780_000, 1_950_000, 2_100_000,
+                1_880_000, 1_720_000, 2_250_000, 2_450_000, 2_680_000, 2_100_000
+            ]
             let months = (0..<12).compactMap { calendar.date(byAdding: .month, value: -$0, to: Date()) }.reversed()
             return months.map { month in
                 let amount = sales
@@ -348,10 +358,8 @@ final class DashboardViewModel: ObservableObject {
                 if amount > 0 {
                     return DailySalesPoint(date: month, amount: amount)
                 } else {
-                    // Aggregate a clean stable curve for monthly views
-                    let monthVal = Double(calendar.component(.month, from: month))
-                    let finalAmount = 1_800_000 + sin(monthVal) * 300_000
-                    return DailySalesPoint(date: month, amount: finalAmount)
+                    let monthIdx = (calendar.component(.month, from: month) - 1) % 12
+                    return DailySalesPoint(date: month, amount: monthlyFallbacks[monthIdx])
                 }
             }
         }
