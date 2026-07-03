@@ -30,6 +30,9 @@ struct StoresView: View {
     @State private var storeToEdit: AdminStore? = nil
     @State private var activeSort: StoreSortOption = .nameAscending
     
+    // UI Constants
+    private let cardWidth: CGFloat = 300
+    
     @State private var viewMode: ViewMode = .grid
     
     // Map state
@@ -91,17 +94,6 @@ struct StoresView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(uiColor: .systemGroupedBackground))
-        } else if storeToEdit != nil {
-            AddStoreView(
-                onDismiss: { 
-                    storeToEdit = nil
-                },
-                editingStore: storeToEdit,
-                onSave: { store in
-                    dataManager.updateStore(store)
-                    storeToEdit = nil
-                }
-            )
         } else {
             VStack(spacing: 0) {
                 // Header Area
@@ -111,7 +103,7 @@ struct StoresView: View {
                     if viewMode == .grid {
                         // Grid of Stores
                         ScrollView {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 20)], spacing: 20) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
                                 ForEach(filteredStores) { store in
                                     StoreCard(store: store, onEdit: {
                                         storeToEdit = store
@@ -122,9 +114,10 @@ struct StoresView: View {
                                         restored.isArchived = false
                                         dataManager.updateStore(restored)
                                     })
-                                    .frame(height: 250)
+                                    .frame(width: cardWidth)
                                 }
                             }
+                            .frame(maxWidth: .infinity)
                             .padding(.horizontal, sizeClass == .compact ? 16 : 32)
                             .padding(.top, 32)
                             .padding(.bottom, 100)
@@ -139,9 +132,6 @@ struct StoresView: View {
                 Spacer()
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .overlay(alignment: .bottom) {
-                statusBar
-            }
             .alert("Error", isPresented: Binding(
                 get: { dataManager.errorMessage != nil },
                 set: { if !$0 { dataManager.errorMessage = nil } }
@@ -165,6 +155,16 @@ struct StoresView: View {
                     onSave: { store in
                         dataManager.addStore(store)
                         showingAddStore = false
+                    }
+                )
+            }
+            .sheet(item: $storeToEdit) { store in
+                AddStoreView(
+                    onDismiss: { storeToEdit = nil },
+                    editingStore: store,
+                    onSave: { updatedStore in
+                        dataManager.updateStore(updatedStore)
+                        storeToEdit = nil
                     }
                 )
             }
@@ -290,193 +290,210 @@ struct StoresView: View {
     
     private func storeDetailsSidebar(for store: AdminStore) -> some View {
         VStack(spacing: 0) {
-            // Sidebar Header
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Store Details")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                    Text(store.storeID ?? "—")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                        selectedMapStore = nil
-                    }
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .overlay(
-                Rectangle()
-                    .fill(Color.gray.opacity(0.12))
-                    .frame(height: 1),
-                alignment: .bottom
-            )
-            
             // Scrollable Content
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(spacing: 0) {
                     
-                    // Store Image
-                    storeImageView(for: store)
-                    
-                    // Store Name & Status
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(store.name)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                        
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(statusColor(for: store.status))
-                                .frame(width: 8, height: 8)
-                            Text(store.status.rawValue.capitalized)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(statusColor(for: store.status))
-                            
-                            if store.isArchived {
-                                Text("• Archived")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.red)
-                            }
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    // Address
-                    detailRow(icon: "mappin.circle.fill", iconColor: .red, label: "ADDRESS", value: store.address)
-                    
-                    // Manager
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.1))
-                                .frame(width: 40, height: 40)
-                            Text(store.managerInitials)
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("MANAGER")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.secondary)
-                                .tracking(0.5)
-                            Text(store.managerName)
-                                .font(.system(size: 15, weight: .semibold))
-                        }
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(uiColor: .systemGray6).opacity(0.7))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                    // Coordinates
-                    if let lat = store.latitude, let lon = store.longitude {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("COORDINATES")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.secondary)
-                                .tracking(0.5)
-                            
-                            HStack(spacing: 16) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.up.and.down")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.secondary)
-                                    Text(String(format: "%.5f", lat))
-                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                }
-                                
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.left.and.right")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.secondary)
-                                    Text(String(format: "%.5f", lon))
-                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                }
-                            }
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(uiColor: .systemGray6).opacity(0.7))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    
-                    Divider()
-                    
-                    // Action Buttons
-                    VStack(spacing: 10) {
-                        Button(action: {
-                            storeToEdit = store
-                            selectedMapStore = nil
-                        }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "pencil.circle.fill")
-                                    .font(.system(size: 16))
-                                Text("Edit Store")
-                                    .font(.system(size: 15, weight: .semibold))
-                            }
+                    // Edge-to-Edge Hero Image with Overlaid Close Button
+                    ZStack(alignment: .topTrailing) {
+                        storeImageView(for: store)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 13)
-                            .foregroundColor(.white)
-                            .background(Color(red: 0.1, green: 0.2, blue: 0.4))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .frame(height: 220)
+                            .clipped()
+                        
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                selectedMapStore = nil
+                            }
+                        }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.primary)
+                                .padding(10)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Circle())
+                        }
+                        .padding(16)
+                    }
+                    
+                    // Content Body
+                    VStack(alignment: .leading, spacing: 24) {
+                        
+                        // Header block
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(store.name)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                            
+                            HStack(spacing: 8) {
+                                Text(store.storeID ?? "—")
+                                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                
+                                Circle().fill(Color.gray.opacity(0.3)).frame(width: 4, height: 4)
+                                
+                                statusBadge(for: store.status)
+                                
+                                if store.isArchived {
+                                    Text("ARCHIVED")
+                                        .font(.system(size: 10, weight: .heavy))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(Color.black.opacity(0.6))
+                                        .foregroundColor(.white)
+                                        .clipShape(Capsule())
+                                }
+                            }
                         }
                         
-                        if store.isArchived {
-                            Button(action: {
-                                var restored = store
-                                restored.isArchived = false
-                                dataManager.updateStore(restored)
-                                selectedMapStore = nil
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.uturn.backward.circle.fill")
-                                        .font(.system(size: 16))
-                                    Text("Restore Store")
+                        Divider()
+                        
+                        // Information Cards
+                        VStack(spacing: 16) {
+                            // Address Card
+                            infoCard(title: "ADDRESS", icon: "mappin.circle.fill", content: AnyView(
+                                Text(store.address)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.primary)
+                            ))
+                            
+                            // Manager Card
+                            infoCard(title: "STORE MANAGER", icon: "person.crop.circle.fill", content: AnyView(
+                                HStack(spacing: 12) {
+                                    Circle()
+                                        .fill(Color(uiColor: .systemGray4))
+                                        .frame(width: 36, height: 36)
+                                        .overlay(
+                                            Text(store.managerInitials)
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(.primary)
+                                        )
+                                    Text(store.managerName)
                                         .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(.primary)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 13)
-                                .foregroundColor(.green)
-                                .background(Color.green.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                        } else {
-                            Button(action: {
-                                dataManager.removeStore(store)
-                                selectedMapStore = nil
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "trash.circle.fill")
-                                        .font(.system(size: 16))
-                                    Text("Remove Store")
-                                        .font(.system(size: 15, weight: .semibold))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 13)
-                                .foregroundColor(.red)
-                                .background(Color.red.opacity(0.06))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            ))
+                            
+                            // Coordinates Card
+                            if let lat = store.latitude, let lon = store.longitude {
+                                infoCard(title: "COORDINATES", icon: "location.fill", content: AnyView(
+                                    HStack(spacing: 24) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "arrow.up.and.down")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(.secondary)
+                                            Text(String(format: "%.5f", lat))
+                                                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                        }
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "arrow.left.and.right")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(.secondary)
+                                            Text(String(format: "%.5f", lon))
+                                                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                        }
+                                    }
+                                ))
                             }
                         }
+                    }
+                    .padding(24)
+                }
+            }
+            
+            // Bottom Action Bar
+            VStack(spacing: 12) {
+                Button(action: {
+                    storeToEdit = store
+                    selectedMapStore = nil
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 15, weight: .bold))
+                        Text("Edit Store")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundColor(.white)
+                    .background(Color(red: 0.1, green: 0.2, blue: 0.4))
+                    .clipShape(Capsule())
+                }
+                
+                if store.isArchived {
+                    Button(action: {
+                        var restored = store
+                        restored.isArchived = false
+                        dataManager.updateStore(restored)
+                        selectedMapStore = nil
+                    }) {
+                        Text("Restore Store")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .foregroundColor(.green)
+                            .background(Color.green.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                } else {
+                    Button(action: {
+                        dataManager.removeStore(store)
+                        selectedMapStore = nil
+                    }) {
+                        Text("Remove Store")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .foregroundColor(.red)
+                            .background(Color.red.opacity(0.1))
+                            .clipShape(Capsule())
                     }
                 }
-                .padding(20)
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 24)
+            .background(.ultraThinMaterial)
+            .overlay(Divider(), alignment: .top)
         }
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .background(Color(uiColor: .systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 0)) // Handled by sidebar frame logic mostly
+    }
+    
+    private func infoCard(title: String, icon: String, content: AnyView) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.5)
+            }
+            .foregroundColor(.secondary)
+            
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color(uiColor: .systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+    
+    @ViewBuilder
+    private func statusBadge(for status: StoreStatus) -> some View {
+        let isMaintenance = status == .maintenance
+        let isInventory = status == .inventory
+        
+        let fgColor = isMaintenance ? Color.purple : (isInventory ? Color.orange : Color.teal)
+        let bgColor = fgColor.opacity(0.15)
+        
+        Text(status.rawValue.uppercased())
+            .font(.system(size: 10, weight: .heavy))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(bgColor)
+            .foregroundColor(fgColor)
+            .clipShape(Capsule())
     }
     
     // MARK: - Store Image View (sidebar)
@@ -514,8 +531,7 @@ struct StoresView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 180)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+
     }
     
     private var imagePlaceholder: some View {
@@ -537,29 +553,6 @@ struct StoresView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: 180)
-    }
-    
-    // MARK: - Detail Row Helper
-    
-    private func detailRow(icon: String, iconColor: Color, label: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundStyle(iconColor)
-                .frame(width: 20)
-                .padding(.top, 2)
-            
-            VStack(alignment: .leading, spacing: 3) {
-                Text(label)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .tracking(0.5)
-                Text(value)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
     }
     
     // MARK: - Status Color Helper
@@ -676,32 +669,6 @@ struct StoresView: View {
                 .background(Color(uiColor: .secondarySystemGroupedBackground))
                 .cornerRadius(8)
         }
-    }
-    
-    private var statusBar: some View {
-        HStack(spacing: 24) {
-            HStack(spacing: 8) {
-                Circle().fill(Color.green).frame(width: 6, height: 6)
-                Text("\(dataManager.stores.filter { $0.status == .active }.count) STORES ONLINE")
-                    .font(.system(size: 9, weight: .bold))
-            }
-            
-            HStack(spacing: 8) {
-                Circle().fill(Color.orange).frame(width: 6, height: 6)
-                Text("\(dataManager.stores.filter { $0.status == .inventory }.count) IN MAINTENANCE")
-                    .font(.system(size: 9, weight: .bold))
-            }
-            
-            Spacer()
-            
-            Text("SYNC STATUS: REAL-TIME • TODAY 09:42 AM")
-                .font(.system(size: 9))
-                .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, 32)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-        .overlay(Divider(), alignment: .top)
     }
 }
 
