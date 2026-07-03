@@ -352,21 +352,21 @@ struct AddPromotionView: View {
 
     private var descriptionSection: some View {
         PromoFormSectionCard(title: "Description", icon: "text.alignleft") {
-            ZStack(alignment: .topLeading) {
-                if description.isEmpty {
-                    Text("Enter promotion details, terms, and conditions…")
+                ZStack(alignment: .topLeading) {
+                    if description.isEmpty {
+                        Text("Enter promotion details, terms, and conditions…")
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 13)
+                    }
+                    TextEditor(text: $description)
                         .font(.system(size: 15))
-                        .foregroundColor(.secondary.opacity(0.6))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 13)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .frame(minHeight: 160)
                 }
-                TextEditor(text: $description)
-                    .font(.system(size: 15))
-                    .scrollContentBackground(.hidden)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .frame(minHeight: 160)
-            }
             .background(PromoFormTheme.fieldBackground)
             .clipShape(RoundedRectangle(cornerRadius: PromoFormTheme.fieldCornerRadius))
         }

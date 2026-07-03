@@ -53,4 +53,15 @@ final class UserService {
             .execute()
             .value
     }
+    
+    func fetchUserByEmail(email: String) async throws -> User? {
+        let users: [User] = try await client
+            .from("users")
+            .select()
+            .eq("email", value: email)
+            .limit(1)
+            .execute()
+            .value
+        return users.first
+    }
 }
