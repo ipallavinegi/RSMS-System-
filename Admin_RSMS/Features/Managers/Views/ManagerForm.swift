@@ -10,6 +10,8 @@ struct ManagerForm: View {
     @State private var fullName: String
     @State private var emailAddress: String
     @State private var selectedStore: String
+    @State private var showingValidationAlert = false
+    @State private var validationMessage = ""
     
     init(memberToEdit: Manager? = nil, onDismiss: @escaping () -> Void, onSave: @escaping (Manager) -> Void) {
         self.memberToEdit = memberToEdit
@@ -20,9 +22,6 @@ struct ManagerForm: View {
         _emailAddress = State(initialValue: memberToEdit?.email ?? "")
         _selectedStore = State(initialValue: memberToEdit?.location ?? "")
     }
-    
-    @State private var showingValidationAlert = false
-    @State private var validationMessage = ""
     
     var body: some View {
         NavigationStack {
@@ -134,127 +133,126 @@ struct ManagerForm: View {
         onSave(member)
     }
         
-        private var roleSelectionField: some View {
-            EmptyView()
-        }
+    private var roleSelectionField: some View {
+        EmptyView()
+    }
         
-        private func inputField(label: String, placeholder: String, icon: String, text: Binding<String>) -> some View {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(label.uppercased())
-                    .font(.system(size: 11, weight: .bold))
+    private func inputField(label: String, placeholder: String, icon: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
-                    .tracking(0.5)
                 
+                TextField(placeholder, text: text)
+                    .font(.system(size: 15))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background(Color(uiColor: .systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .frame(maxWidth: .infinity)
+    }
+        
+    private var storeAssignmentField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("STORE ASSIGNMENT")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            
+            let activeStores = dataManager.stores.filter { !$0.isArchived }
+            
+            if activeStores.isEmpty {
                 HStack(spacing: 8) {
-                    Image(systemName: icon)
+                    Image(systemName: "storefront")
                         .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                    
-                    TextField(placeholder, text: text)
+                        .foregroundColor(.secondary)
+                    Text("No stores available")
+                        .foregroundColor(.secondary)
                         .font(.system(size: 15))
+                    Spacer()
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 13)
                 .background(Color(uiColor: .systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .frame(maxWidth: .infinity)
-        }
-        
-        private var storeAssignmentField: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("STORE ASSIGNMENT")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .tracking(0.5)
-                
-                let activeStores = dataManager.stores.filter { !$0.isArchived }
-                
-                if activeStores.isEmpty {
+            } else {
+                Menu {
+                    Button(action: { selectedStore = "" }) {
+                        Label("None", systemImage: selectedStore.isEmpty ? "checkmark" : "minus")
+                    }
+                    Divider()
+                    ForEach(activeStores) { store in
+                        Button(action: { selectedStore = store.name }) {
+                            if selectedStore == store.name {
+                                Label(store.name, systemImage: "checkmark")
+                            } else {
+                                Text(store.name)
+                            }
+                        }
+                    }
+                } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "storefront")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                        Text("No stores available")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 15))
+                        
+                        if selectedStore.isEmpty {
+                            Text("Select a store...")
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text(selectedStore)
+                                .foregroundColor(.primary)
+                        }
                         Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
                     }
+                    .font(.system(size: 15))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 13)
                     .background(Color(uiColor: .systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    Menu {
-                        Button(action: { selectedStore = "" }) {
-                            Label("None", systemImage: selectedStore.isEmpty ? "checkmark" : "minus")
-                        }
-                        Divider()
-                        ForEach(activeStores) { store in
-                            Button(action: { selectedStore = store.name }) {
-                                if selectedStore == store.name {
-                                    Label(store.name, systemImage: "checkmark")
-                                } else {
-                                    Text(store.name)
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "storefront")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                            
-                            if selectedStore.isEmpty {
-                                Text("Select a store...")
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text(selectedStore)
-                                    .foregroundColor(.primary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 10))
-                                .foregroundColor(.secondary)
-                        }
-                        .font(.system(size: 15))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 13)
-                        .background(Color(uiColor: .systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
                 }
             }
-            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
+    }
         
         
-        private var onboardingNote: some View {
-            HStack(alignment: .top, spacing: 16) {
-                Image(systemName: "info.circle.fill")
-                    .foregroundColor(.blue)
-                    .font(.system(size: 20))
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Onboarding Invitation")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                    Text("An invitation email will be sent immediately after account creation with instructions to set their password and complete their profile.")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.8))
-                }
+    private var onboardingNote: some View {
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: "info.circle.fill")
+                .foregroundColor(.blue)
+                .font(.system(size: 20))
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Onboarding Invitation")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
+                Text("An invitation email will be sent immediately after account creation with instructions to set their password and complete their profile.")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.8))
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.blue.opacity(0.05))
-            .cornerRadius(12)
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.blue.opacity(0.05))
+        .cornerRadius(12)
     }
+}
 
-    #Preview {
-        ManagerForm(
-            onDismiss: {},
-            onSave: { _ in }
-        )
-    }
-
+#Preview {
+    ManagerForm(
+        onDismiss: {},
+        onSave: { _ in }
+    )
+}

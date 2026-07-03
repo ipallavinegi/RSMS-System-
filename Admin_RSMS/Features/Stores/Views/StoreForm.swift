@@ -147,7 +147,7 @@ class StoreIDGenerator: ObservableObject {
 }
 
 // MARK: - Theme constants
-private enum FormTheme {
+enum FormTheme {
     static let navy = Color(red: 0.1, green: 0.2, blue: 0.4)
     static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
     static let fieldBackground = Color(uiColor: .systemGray6)
@@ -157,7 +157,7 @@ private enum FormTheme {
 }
 
 // MARK: - Reusable Section Card
-private struct FormSectionCard<Content: View>: View {
+struct FormSectionCard<Content: View>: View {
     let title: String
     let icon: String
     @ViewBuilder var content: () -> Content
@@ -187,7 +187,7 @@ private struct FormSectionCard<Content: View>: View {
 }
 
 // MARK: - Reusable Field Label
-private struct FieldLabel: View {
+struct FieldLabel: View {
     let text: String
     
     var body: some View {
@@ -224,6 +224,9 @@ struct AddStoreView: View {
     @State private var showingImageSourceSheet = false
     @State private var showingImagePicker = false
     @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
+    
+    @State private var showingValidationAlert = false
+    @State private var validationMessage = ""
     
     @StateObject private var locationManager = LocationManager()
     @StateObject private var storeIDGenerator = StoreIDGenerator.shared
@@ -306,6 +309,13 @@ struct AddStoreView: View {
 
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $selectedImage, sourceType: imageSourceType)
+        }
+        .alert(isPresented: $showingValidationAlert) {
+            Alert(
+                title: Text("Missing Information"),
+                message: Text(validationMessage),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
     
@@ -823,12 +833,25 @@ struct AddStoreView: View {
     private func saveStore() {
         let trimmedName = storeName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAddress = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if trimmedName.isEmpty {
+            validationMessage = "Please enter the store name."
+            showingValidationAlert = true
+            return
+        }
+        
+        if !pinPlaced {
+            validationMessage = "Please set a location on the map."
+            showingValidationAlert = true
+            return
+        }
+        
         let storeID = generatedStoreID.isEmpty ? StoreIDGenerator.shared.nextID(forRegion: detectedRegionCode.isEmpty ? "XX" : detectedRegionCode) : generatedStoreID
         
         let store = AdminStore(
             id: editingStore?.id ?? UUID(),
             storeID: storeID,
-            name: trimmedName.isEmpty ? "New Store" : trimmedName,
+            name: trimmedName,
             address: trimmedAddress.isEmpty ? "Address not set" : trimmedAddress,
             managerName: editingStore?.managerName ?? "Unassigned",
             managerInitials: editingStore?.managerInitials ?? "--",

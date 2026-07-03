@@ -24,14 +24,22 @@ struct AppUser: Encodable {
     let password:   String
     let email:      String
     let roleId:     UUID
+    let storeId:    UUID?
+    let designation: String?
+    let createdBy:  UUID?
+    let employeeStatus: String?
 
     enum CodingKeys: String, CodingKey {
         case id
-        case fullName   = "full_name"
+        case fullName       = "full_name"
         case username
         case password
         case email
-        case roleId     = "role_id"
+        case roleId         = "role_id"
+        case storeId        = "store_id"
+        case designation    = "designation"
+        case createdBy      = "created_by"
+        case employeeStatus = "employee_status"
     }
 }
 
@@ -43,6 +51,7 @@ class RSMSDataManager: ObservableObject {
     // ── Published state ───────────────────────────────────────────
     @Published var stores:       [AdminStore]   = []
     @Published var managers: [Manager]  = []
+    @Published var products: [Product]  = []
     @Published var isLoading:    Bool           = false
     @Published var errorMessage: String?        = nil
 
@@ -52,6 +61,7 @@ class RSMSDataManager: ObservableObject {
     // Private realtime channel references
     private var storeChannel: RealtimeChannelV2?
     private var managerChannel: RealtimeChannelV2?
+    private var productChannel: RealtimeChannelV2?
 
     // ─────────────────────────────────────────────────────────────
     // MARK: – Init: load data & start realtime
@@ -71,7 +81,8 @@ class RSMSDataManager: ObservableObject {
         errorMessage = nil
         async let s = fetchStores()
         async let m = fetchManager()
-        _ = await (s, m)
+        async let p = fetchProducts()
+        _ = await (s, m, p)
         isLoading = false
     }
 
@@ -92,6 +103,27 @@ class RSMSDataManager: ObservableObject {
         } catch {
             errorMessage = "Failed to load stores: \(error.localizedDescription)"
             print("[RSMS] fetchStores error: \(error)")
+            return []
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // MARK: – PRODUCTS: Fetch
+    // ─────────────────────────────────────────────────────────────
+    @discardableResult
+    func fetchProducts() async -> [Product] {
+        do {
+            let result: [Product] = try await client
+                .from("products")
+                .select()
+                .order("product_name")
+                .execute()
+                .value
+            products = result
+            return result
+        } catch {
+            errorMessage = "Failed to load products: \(error.localizedDescription)"
+            print("[RSMS] fetchProducts error: \(error)")
             return []
         }
     }
@@ -253,14 +285,21 @@ class RSMSDataManager: ObservableObject {
                         let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
                         let randomPassword = String((0..<8).map { _ in letters.randomElement()! })
                         
-                        // 3. Insert into users table using AppUser payload
+                        // 3. Find the store to get store_id
+                        let store = self.stores.first(where: { $0.name == member.location })
+                        
+                        // 4. Insert into users table using AppUser payload
                         let newUser = AppUser(
                             id: UUID(),
                             fullName: member.name,
                             username: member.email,
                             password: randomPassword,
                             email: member.email,
-                            roleId: role.id
+                            roleId: role.id,
+                            storeId: store?.id,
+                            designation: "Manager",
+                            createdBy: AuthManager.shared.currentUser?.id,
+                            employeeStatus: "Active"
                         )
                         
                         _ = try await client
@@ -364,6 +403,19 @@ class RSMSDataManager: ObservableObject {
                         await unassignManagerFromStore(location: member.location, managerName: member.name)
                     }
                 }
+                
+                // Update employee status to Inactive in the users table
+                struct UserStatusUpdate: Encodable {
+                    let employeeStatus: String
+                    enum CodingKeys: String, CodingKey {
+                        case employeeStatus = "employee_status"
+                    }
+                }
+                _ = try? await client
+                    .from("users")
+                    .update(UserStatusUpdate(employeeStatus: "Inactive"))
+                    .eq("email", value: member.email)
+                    .execute()
             } catch {
                 errorMessage = "Failed to archive manager member: \(error.localizedDescription)"
                 print("[RSMS] removeManager error: \(error)")
@@ -470,6 +522,22 @@ class RSMSDataManager: ObservableObject {
         Task {
             for await _ in managerChanges {
                 await fetchManager()
+            }
+        }
+        
+        // ── Products channel ────────────────────────────────────────
+        let productCh = await client.realtimeV2.channel("products-changes")
+        let productChanges = await productCh.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table:  "products"
+        )
+        await productCh.subscribe()
+        productChannel = productCh
+
+        Task {
+            for await _ in productChanges {
+                await fetchProducts()
             }
         }
     }

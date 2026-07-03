@@ -380,7 +380,7 @@ struct StoresView: View {
                                     Text(store.managerName)
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(.primary)
-                                }
+                                 }
                             ))
                             
                             // Coordinates Card
@@ -680,7 +680,6 @@ struct StoresView: View {
         }
     }
 }
-
 
 #Preview {
     StoresView()

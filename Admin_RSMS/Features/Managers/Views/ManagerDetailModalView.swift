@@ -11,81 +11,122 @@ struct ManagerDetailModalView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    HStack(spacing: 16) {
-                        Circle()
-                            .fill(Color(uiColor: .systemGray5))
-                            .frame(width: 64, height: 64)
-                            .overlay(
-                                Text(managerInitials(for: manager.name))
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.primary)
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(manager.name)
-                                .font(.title3.weight(.bold))
-                            Text(manager.role)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 8)
-                }
-                
-                Section(header: Text("Overview")) {
-                    ListRow(label: "Store Assigned", value: manager.location, icon: "building.2.fill")
-                    ListRow(label: "Email Address", value: manager.email, icon: "envelope.fill")
-                }
-                
-                Section(header: Text("Additional Details")) {
-                    if isLoadingProfile {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
-                        }
-                        .padding(.vertical, 8)
-                    } else {
-                        ListRow(
-                            label: "Phone Number",
-                            value: userProfile?.phone?.isEmpty == false ? (userProfile?.phone ?? "Not Provided") : "Not Provided",
-                            icon: "phone.fill"
-                        )
-                        ListRow(
-                            label: "Gender",
-                            value: userProfile?.gender?.isEmpty == false ? (userProfile?.gender ?? "Not Provided") : "Not Provided",
-                            icon: "person.fill.viewfinder"
-                        )
-                        ListRow(
-                            label: "Date of Birth",
-                            value: userProfile?.dateOfBirth?.isEmpty == false ? (userProfile?.dateOfBirth ?? "Not Provided") : "Not Provided",
-                            icon: "calendar"
-                        )
-                        ListRow(
-                            label: "Address",
-                            value: userProfile?.address?.isEmpty == false ? (userProfile?.address ?? "Not Provided") : "Not Provided",
-                            icon: "mappin.circle.fill"
-                        )
-                    }
+        VStack(spacing: 0) {
+            topBar
+            
+            ScrollView {
+                if sizeClass == .regular {
+                    wideLayout
+                } else {
+                    compactLayout
                 }
             }
-            .navigationTitle("Manager Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        onDismiss()
-                    }
-                }
-            }
+            .background(Color(uiColor: .systemGroupedBackground))
         }
         .task {
             await fetchUserProfile()
         }
     }
+    
+    // MARK: - Top Bar
+    
+    private var topBar: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Button(action: { onDismiss() }) {
+                Text("Close")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(uiColor: .systemBackground))
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
+            }
+            
+            Text(manager.name)
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+        .padding(.bottom, 4)
+        .background(Color(uiColor: .systemGroupedBackground))
+    }
+    
+    // MARK: - Layouts
+    
+    private var wideLayout: some View {
+        HStack(alignment: .top, spacing: 24) {
+            VStack(spacing: 20) {
+                overviewSection
+            }
+            .frame(maxWidth: .infinity)
+            
+            VStack(spacing: 20) {
+                extendedDetailsSection
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(28)
+    }
+    
+    private var compactLayout: some View {
+        VStack(spacing: 20) {
+            overviewSection
+            extendedDetailsSection
+        }
+        .padding(20)
+    }
+    
+    // MARK: - Sections
+    
+    private var overviewSection: some View {
+        FormSectionCard(title: "Overview", icon: "person.crop.rectangle") {
+            VStack(alignment: .leading, spacing: 16) {
+                detailRow(label: "Store Assigned", value: manager.location, icon: "building.2.fill")
+                detailRow(label: "Email Address", value: manager.email, icon: "envelope.fill")
+            }
+        }
+    }
+    
+    private var extendedDetailsSection: some View {
+        FormSectionCard(title: "Additional Details", icon: "list.bullet.clipboard") {
+            if isLoadingProfile {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    detailRow(
+                        label: "Phone Number",
+                        value: userProfile?.phone?.isEmpty == false ? (userProfile?.phone ?? "Not Provided") : "Not Provided",
+                        icon: "phone.fill"
+                    )
+                    
+                    detailRow(
+                        label: "Gender",
+                        value: userProfile?.gender?.isEmpty == false ? (userProfile?.gender ?? "Not Provided") : "Not Provided",
+                        icon: "person.fill.viewfinder"
+                    )
+                    
+                    detailRow(
+                        label: "Date of Birth",
+                        value: userProfile?.dateOfBirth?.isEmpty == false ? (userProfile?.dateOfBirth ?? "Not Provided") : "Not Provided",
+                        icon: "calendar"
+                    )
+                    
+                    detailRow(
+                        label: "Address",
+                        value: userProfile?.address?.isEmpty == false ? (userProfile?.address ?? "Not Provided") : "Not Provided",
+                        icon: "mappin.circle.fill"
+                    )
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helpers
     
     private func fetchUserProfile() async {
         do {
@@ -102,40 +143,20 @@ struct ManagerDetailModalView: View {
         }
     }
     
-    private func managerInitials(for name: String) -> String {
-        let components = name.components(separatedBy: " ")
-        if components.count >= 2 {
-            let first = components[0].prefix(1)
-            let last = components.last?.prefix(1) ?? ""
-            return String(first + last).uppercased()
-        } else {
-            return String(name.prefix(2)).uppercased()
-        }
-    }
-}
-
-fileprivate struct ListRow: View {
-    let label: String
-    let value: String
-    let icon: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
+    private func detailRow(label: String, value: String, icon: String, valueColor: Color = .primary) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .bold))
                 .foregroundColor(.secondary)
-                .frame(width: 24, height: 24)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.caption)
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
                     .foregroundColor(.secondary)
                 Text(value)
-                    .font(.body)
-                    .foregroundColor(.primary)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(valueColor)
             }
         }
-        .padding(.vertical, 4)
     }
 }
-

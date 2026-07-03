@@ -104,8 +104,8 @@ struct DashboardView: View {
                                     category: "Inventory", 
                                     title: "Products", 
                                     value: "\(viewModel.inventoryProductsCount)", 
-                                    footnoteLeft: "Stocked", 
-                                    footnoteRight: "items", 
+                                    footnoteLeft: "Approved", 
+                                    footnoteRight: "of \(viewModel.inventoryProductsTotal) total", 
                                     iconName: "shippingbox.fill", 
                                     iconColor: .green, 
                                     iconBackground: .green.opacity(0.15)
@@ -118,8 +118,8 @@ struct DashboardView: View {
                                     category: "Staffing", 
                                     title: "Managers", 
                                     value: "\(viewModel.staffingManagersCount)", 
-                                    footnoteLeft: "Allocated", 
-                                    footnoteRight: "of \(viewModel.staffingManagersTotal) slots", 
+                                    footnoteLeft: "Active", 
+                                    footnoteRight: "of \(viewModel.staffingManagersTotal) total", 
                                     iconName: "person.2.fill", 
                                     iconColor: .orange, 
                                     iconBackground: .orange.opacity(0.15)
