@@ -20,9 +20,6 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                DashboardHeaderView()
-                    .padding(.top, 16)
-                
                 // Top Section: Revenue Chart (Left) + 2x2 KPI Grid (Right)
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 24) {
@@ -289,13 +286,13 @@ struct DashboardView: View {
                     
                 }
                 
-                // Add some padding at the bottom so the floating tab bar doesn't overlap content
-                Spacer().frame(height: 100)
+                // Bottom padding
+                Spacer().frame(height: 32)
             }
             .padding(.horizontal, 24)
+            .padding(.top, 16)
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationBarHidden(true)
         .statusBarHidden()
         .task {
             await viewModel.load()

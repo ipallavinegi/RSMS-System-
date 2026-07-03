@@ -38,7 +38,7 @@ struct ProductsView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20, alignment: .top)], spacing: 20) {
                             ForEach(filteredProducts) { product in
                                 ProductCard(
                                     product: product,

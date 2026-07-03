@@ -32,15 +32,14 @@ struct StoresView: View {
     
     @State private var viewMode: ViewMode = .grid
     
-    // Binding variables for the sidebar map coordinates
-    @State private var sidebarSelectedCoordinate = CLLocationCoordinate2D(latitude: 20.0, longitude: 0.0)
-    @State private var sidebarPinPlaced = false
-    @State private var sidebarMapRegion = MKCoordinateRegion(
+    // Map state
+    @State private var mapRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 20.0, longitude: 0.0),
         span: MKCoordinateSpan(latitudeDelta: 120, longitudeDelta: 120)
     )
     
-    private let newPinId = UUID()
+    // Selected store on map
+    @State private var selectedMapStore: AdminStore? = nil
     
     var filteredStores: [AdminStore] {
         let stores = dataManager.stores
@@ -68,7 +67,7 @@ struct StoresView: View {
     }
     
     var mapAnnotations: [MapStorePin] {
-        var pins = dataManager.stores.compactMap { store -> MapStorePin? in
+        dataManager.stores.compactMap { store -> MapStorePin? in
             guard let lat = store.latitude, let lon = store.longitude else { return nil }
             return MapStorePin(
                 id: store.id,
@@ -78,17 +77,6 @@ struct StoresView: View {
                 isArchived: store.isArchived
             )
         }
-        
-        if sidebarPinPlaced {
-            pins.append(MapStorePin(
-                id: newPinId,
-                coordinate: sidebarSelectedCoordinate,
-                name: "New Store Location",
-                isNewPin: true
-            ))
-        }
-        
-        return pins
     }
     
     var body: some View {
@@ -120,9 +108,6 @@ struct StoresView: View {
                 headerView
                 
                 VStack(alignment: .leading, spacing: 20) {
-                    // Network Overview section
-                    
-                    
                     if viewMode == .grid {
                         // Grid of Stores
                         ScrollView {
@@ -145,86 +130,8 @@ struct StoresView: View {
                             .padding(.bottom, 100)
                         }
                     } else {
-                        // Full Screen Map with Sidebar
-                        HStack(spacing: 0) {
-                            ZStack(alignment: .bottomTrailing) {
-                                Map(coordinateRegion: $sidebarMapRegion, annotationItems: mapAnnotations) { pin in
-                                    MapAnnotation(coordinate: pin.coordinate) {
-                                        VStack(spacing: 0) {
-                                            if pin.isNewPin {
-                                                Image(systemName: "mappin.circle.fill")
-                                                    .font(.system(size: 36))
-                                                    .foregroundColor(.green)
-                                                    .shadow(radius: 4)
-                                            } else {
-                                                Image(systemName: "mappin.circle.fill")
-                                                    .font(.system(size: 30))
-                                                    .foregroundColor(pin.isArchived ? .gray : .blue)
-                                                    .shadow(radius: 4)
-                                                    .opacity(pin.isArchived ? 0.6 : 1.0)
-                                            }
-                                            
-                                            Text(pin.name)
-                                                .font(.system(size: 10, weight: .bold))
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(Color.white.opacity(0.9))
-                                                .cornerRadius(4)
-                                                .shadow(radius: 2)
-                                                .offset(y: 4)
-                                                .opacity(pin.isArchived ? 0.6 : 1.0)
-                                        }
-                                    }
-                                }
-                                .edgesIgnoringSafeArea(.bottom)
-                                
-                                // Zoom Controls
-                                VStack(spacing: 0) {
-                                    Button(action: {
-                                        withAnimation {
-                                            sidebarMapRegion.span.latitudeDelta = max(sidebarMapRegion.span.latitudeDelta / 2, 0.01)
-                                            sidebarMapRegion.span.longitudeDelta = max(sidebarMapRegion.span.longitudeDelta / 2, 0.01)
-                                        }
-                                    }) {
-                                        Image(systemName: "plus")
-                                            .font(.title3.bold())
-                                            .frame(width: 44, height: 44)
-                                            .background(Color.white)
-                                            .foregroundColor(.primary)
-                                    }
-                                    Divider()
-                                    Button(action: {
-                                        withAnimation {
-                                            sidebarMapRegion.span.latitudeDelta = min(sidebarMapRegion.span.latitudeDelta * 2, 180)
-                                            sidebarMapRegion.span.longitudeDelta = min(sidebarMapRegion.span.longitudeDelta * 2, 180)
-                                        }
-                                    }) {
-                                        Image(systemName: "minus")
-                                            .font(.title3.bold())
-                                            .frame(width: 44, height: 44)
-                                            .background(Color.white)
-                                            .foregroundColor(.primary)
-                                    }
-                                }
-                                .cornerRadius(8)
-                                .shadow(radius: 4)
-                                .padding(24)
-                            }
-                            
-                            // Divider
-                            Divider()
-                            
-                            // Right Sidebar for registering
-                            AddStoreSidebarView(
-                                mapRegion: $sidebarMapRegion,
-                                selectedCoordinate: $sidebarSelectedCoordinate,
-                                pinPlaced: $sidebarPinPlaced,
-                                onSave: { newStore in
-                                    dataManager.addStore(newStore)
-                                }
-                            )
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        // Full Screen Map with optional details sidebar
+                        mapViewContent
                     }
                 }
                 .padding(.bottom, 0)
@@ -250,25 +157,16 @@ struct StoresView: View {
                 await dataManager.fetchAll()
             }
             .sheet(isPresented: $showingAddStore) {
-                NavigationView {
-                    AddStoreView(
-                        onDismiss: {
-                            showingAddStore = false
-                        },
-                        editingStore: nil,
-                        onSave: { store in
-                            dataManager.addStore(store)
-                            showingAddStore = false
-                        }
-                    )
-                    .navigationTitle("Add New Store")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { showingAddStore = false }
-                        }
+                AddStoreView(
+                    onDismiss: {
+                        showingAddStore = false
+                    },
+                    editingStore: nil,
+                    onSave: { store in
+                        dataManager.addStore(store)
+                        showingAddStore = false
                     }
-                }
+                )
             }
             .navigationTitle("Stores")
             .navigationBarTitleDisplayMode(.inline)
@@ -286,7 +184,396 @@ struct StoresView: View {
         }
     }
     
-    // Subviews to keep body clean
+    // MARK: - Map View Content
+    
+    private var mapViewContent: some View {
+        HStack(spacing: 0) {
+            // Map (takes full width or shares with sidebar)
+            ZStack(alignment: .bottomTrailing) {
+                Map(coordinateRegion: $mapRegion, annotationItems: mapAnnotations) { pin in
+                    MapAnnotation(coordinate: pin.coordinate) {
+                        Button(action: {
+                            // Find the matching store and select it
+                            if let store = dataManager.stores.first(where: { $0.id == pin.id }) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                    selectedMapStore = store
+                                    // Zoom into the selected store
+                                    mapRegion = MKCoordinateRegion(
+                                        center: pin.coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                    )
+                                }
+                            }
+                        }) {
+                            VStack(spacing: 2) {
+                                ZStack {
+                                    // Outer glow for selected state
+                                    if selectedMapStore?.id == pin.id {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.15))
+                                            .frame(width: 50, height: 50)
+                                    }
+                                    
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.system(size: selectedMapStore?.id == pin.id ? 36 : 28))
+                                        .foregroundColor(pin.isArchived ? .gray : (selectedMapStore?.id == pin.id ? Color(red: 0.1, green: 0.2, blue: 0.4) : .blue))
+                                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                                        .opacity(pin.isArchived ? 0.6 : 1.0)
+                                        .scaleEffect(selectedMapStore?.id == pin.id ? 1.15 : 1.0)
+                                }
+                                
+                                Text(pin.name)
+                                    .font(.system(size: selectedMapStore?.id == pin.id ? 11 : 9, weight: .bold))
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(selectedMapStore?.id == pin.id ? Color.white : Color.white.opacity(0.9))
+                                            .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                                    )
+                                    .opacity(pin.isArchived ? 0.6 : 1.0)
+                            }
+                            .animation(.easeInOut(duration: 0.2), value: selectedMapStore?.id)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .edgesIgnoringSafeArea(.bottom)
+                
+                // Zoom Controls
+                VStack(spacing: 0) {
+                    Button(action: {
+                        withAnimation {
+                            mapRegion.span.latitudeDelta = max(mapRegion.span.latitudeDelta / 2, 0.01)
+                            mapRegion.span.longitudeDelta = max(mapRegion.span.longitudeDelta / 2, 0.01)
+                        }
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title3.bold())
+                            .frame(width: 44, height: 44)
+                            .background(.ultraThinMaterial)
+                            .foregroundColor(.primary)
+                    }
+                    Divider().frame(width: 44)
+                    Button(action: {
+                        withAnimation {
+                            mapRegion.span.latitudeDelta = min(mapRegion.span.latitudeDelta * 2, 180)
+                            mapRegion.span.longitudeDelta = min(mapRegion.span.longitudeDelta * 2, 180)
+                        }
+                    }) {
+                        Image(systemName: "minus")
+                            .font(.title3.bold())
+                            .frame(width: 44, height: 44)
+                            .background(.ultraThinMaterial)
+                            .foregroundColor(.primary)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+                .padding(24)
+            }
+            
+            // Store Details Sidebar (slides in when a pin is selected)
+            if let store = selectedMapStore {
+                Divider()
+                
+                storeDetailsSidebar(for: store)
+                    .frame(width: 360)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    // MARK: - Store Details Sidebar
+    
+    private func storeDetailsSidebar(for store: AdminStore) -> some View {
+        VStack(spacing: 0) {
+            // Sidebar Header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Store Details")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
+                    Text(store.storeID ?? "—")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        selectedMapStore = nil
+                    }
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .overlay(
+                Rectangle()
+                    .fill(Color.gray.opacity(0.12))
+                    .frame(height: 1),
+                alignment: .bottom
+            )
+            
+            // Scrollable Content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    
+                    // Store Image
+                    storeImageView(for: store)
+                    
+                    // Store Name & Status
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(store.name)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                        
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(statusColor(for: store.status))
+                                .frame(width: 8, height: 8)
+                            Text(store.status.rawValue.capitalized)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(statusColor(for: store.status))
+                            
+                            if store.isArchived {
+                                Text("• Archived")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    // Address
+                    detailRow(icon: "mappin.circle.fill", iconColor: .red, label: "ADDRESS", value: store.address)
+                    
+                    // Manager
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.1))
+                                .frame(width: 40, height: 40)
+                            Text(store.managerInitials)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("MANAGER")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.secondary)
+                                .tracking(0.5)
+                            Text(store.managerName)
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(uiColor: .systemGray6).opacity(0.7))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
+                    // Coordinates
+                    if let lat = store.latitude, let lon = store.longitude {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("COORDINATES")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.secondary)
+                                .tracking(0.5)
+                            
+                            HStack(spacing: 16) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.up.and.down")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.secondary)
+                                    Text(String(format: "%.5f", lat))
+                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.left.and.right")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.secondary)
+                                    Text(String(format: "%.5f", lon))
+                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                }
+                            }
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(uiColor: .systemGray6).opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    
+                    Divider()
+                    
+                    // Action Buttons
+                    VStack(spacing: 10) {
+                        Button(action: {
+                            storeToEdit = store
+                            selectedMapStore = nil
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "pencil.circle.fill")
+                                    .font(.system(size: 16))
+                                Text("Edit Store")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                            .foregroundColor(.white)
+                            .background(Color(red: 0.1, green: 0.2, blue: 0.4))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        
+                        if store.isArchived {
+                            Button(action: {
+                                var restored = store
+                                restored.isArchived = false
+                                dataManager.updateStore(restored)
+                                selectedMapStore = nil
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.uturn.backward.circle.fill")
+                                        .font(.system(size: 16))
+                                    Text("Restore Store")
+                                        .font(.system(size: 15, weight: .semibold))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .foregroundColor(.green)
+                                .background(Color.green.opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        } else {
+                            Button(action: {
+                                dataManager.removeStore(store)
+                                selectedMapStore = nil
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "trash.circle.fill")
+                                        .font(.system(size: 16))
+                                    Text("Remove Store")
+                                        .font(.system(size: 15, weight: .semibold))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .foregroundColor(.red)
+                                .background(Color.red.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+                    }
+                }
+                .padding(20)
+            }
+        }
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+    }
+    
+    // MARK: - Store Image View (sidebar)
+    
+    @ViewBuilder
+    private func storeImageView(for store: AdminStore) -> some View {
+        Group {
+            if let imageUrlString = store.imageUrl, let url = URL(string: imageUrlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        imagePlaceholder
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 180)
+                            .clipped()
+                    case .failure:
+                        imagePlaceholder
+                    @unknown default:
+                        imagePlaceholder
+                    }
+                }
+            } else if let imageData = store.imageData, let image = UIImage(data: imageData) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 180)
+                    .clipped()
+            } else {
+                imagePlaceholder
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 180)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+    
+    private var imagePlaceholder: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.08), Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.03)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            VStack(spacing: 8) {
+                Image(systemName: "building.2")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.2))
+                Text("No Image")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 180)
+    }
+    
+    // MARK: - Detail Row Helper
+    
+    private func detailRow(icon: String, iconColor: Color, label: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundStyle(iconColor)
+                .frame(width: 20)
+                .padding(.top, 2)
+            
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .tracking(0.5)
+                Text(value)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+    
+    // MARK: - Status Color Helper
+    
+    private func statusColor(for status: StoreStatus) -> Color {
+        switch status {
+        case .active: return .green
+        case .maintenance: return .orange
+        case .inventory: return .blue
+        }
+    }
+    
+    // MARK: - Subviews
+    
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 16) {
             
@@ -349,7 +636,12 @@ struct StoresView: View {
     
     private var gridMapToggle: some View {
         HStack(spacing: 0) {
-            Button(action: { withAnimation { viewMode = .grid } }) {
+            Button(action: {
+                withAnimation {
+                    viewMode = .grid
+                    selectedMapStore = nil
+                }
+            }) {
                 Label("Grid", systemImage: "square.grid.2x2")
                     .font(.system(size: 13, weight: viewMode == .grid ? .bold : .medium))
                     .foregroundColor(viewMode == .grid ? .blue : .secondary)

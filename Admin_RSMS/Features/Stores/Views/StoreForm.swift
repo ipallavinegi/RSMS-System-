@@ -146,6 +146,58 @@ class StoreIDGenerator: ObservableObject {
     }
 }
 
+// MARK: - Theme constants
+private enum FormTheme {
+    static let navy = Color(red: 0.1, green: 0.2, blue: 0.4)
+    static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    static let fieldBackground = Color(uiColor: .systemGray6)
+    static let cornerRadius: CGFloat = 16
+    static let fieldCornerRadius: CGFloat = 12
+    static let sectionSpacing: CGFloat = 24
+}
+
+// MARK: - Reusable Section Card
+private struct FormSectionCard<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder var content: () -> Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // Section header
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(FormTheme.navy)
+                    .frame(width: 32, height: 32)
+                    .background(FormTheme.navy.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                
+                Text(title)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+            }
+            
+            content()
+        }
+        .padding(24)
+        .background(FormTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: FormTheme.cornerRadius, style: .continuous))
+    }
+}
+
+// MARK: - Reusable Field Label
+private struct FieldLabel: View {
+    let text: String
+    
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.secondary)
+            .tracking(0.5)
+    }
+}
+
 // MARK: - Add Store View
 struct AddStoreView: View {
     private let editingStore: AdminStore?
@@ -156,11 +208,7 @@ struct AddStoreView: View {
     @State private var generatedStoreID = ""
     @State private var detectedRegionCode = ""
     @State private var address = ""
-    @State private var storeType = "Flagship"
     @State private var storeStatus: StoreStatus = .active
-    @State private var openingTime = Date()
-    @State private var closingTime = Date()
-    @State private var weekendOps = true
     
     // Map state — starts at world view
     @State private var mapRegion = MKCoordinateRegion(
@@ -180,20 +228,10 @@ struct AddStoreView: View {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var storeIDGenerator = StoreIDGenerator.shared
     
-    // Default times
-    private var defaultOpenTime: Date {
-        var components = DateComponents()
-        components.hour = 9
-        components.minute = 0
-        return Calendar.current.date(from: components) ?? Date()
-    }
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
-    private var defaultCloseTime: Date {
-        var components = DateComponents()
-        components.hour = 21
-        components.minute = 0
-        return Calendar.current.date(from: components) ?? Date()
-    }
+    // Default times
+
     
     init(onDismiss: @escaping () -> Void, editingStore: AdminStore? = nil, onSave: @escaping (AdminStore) -> Void = { _ in }) {
         self.onDismiss = onDismiss
@@ -206,16 +244,6 @@ struct AddStoreView: View {
             _selectedImage = State(initialValue: UIImage(data: imageData))
         }
         _storeStatus = State(initialValue: editingStore?.status ?? .active)
-        // Set default opening/closing times
-        var openComps = DateComponents()
-        openComps.hour = 9
-        openComps.minute = 0
-        _openingTime = State(initialValue: Calendar.current.date(from: openComps) ?? Date())
-        
-        var closeComps = DateComponents()
-        closeComps.hour = 21
-        closeComps.minute = 0
-        _closingTime = State(initialValue: Calendar.current.date(from: closeComps) ?? Date())
         
         // Initialize coordinates if available
         if let lat = editingStore?.latitude, let lon = editingStore?.longitude {
@@ -226,466 +254,28 @@ struct AddStoreView: View {
         }
     }
     
+    // Determine if we should use wide two-column layout
+    private var useWideLayout: Bool {
+        sizeClass == .regular
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            // Top Bar — native iOS chevron only, no "Back" text
-            HStack(spacing: 16) {
-                Button(action: { onDismiss() }) {
-                    Image(systemName: "chevron.backward")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                }
-                
-                Spacer()
-                
-                Text(editingStore == nil ? "Add New Store" : "Edit Store")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                
-                Spacer()
-                
-                // Invisible balancer
-                Image(systemName: "chevron.backward")
-                    .font(.system(size: 20, weight: .medium))
-                    .opacity(0)
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
-            .background(Color.white)
-            .overlay(Divider(), alignment: .bottom)
+            // ── Top Navigation Bar ──
+            topBar
             
+            // ── Scrollable Content ──
             ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
-                    HStack(alignment: .top, spacing: 32) {
-                        // Left Column: Basic Information
-                        VStack(alignment: .leading, spacing: 24) {
-                            VStack(alignment: .leading, spacing: 20) {
-                                Text("Basic Information")
-                                    .font(.headline)
-                                    .padding(.bottom, 4)
-                                
-                                HStack(spacing: 20) {
-                                    // Store ID — first (left), auto-generated
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("STORE ID")
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .foregroundColor(.secondary)
-                                        HStack {
-                                            Text(generatedStoreID.isEmpty ? "Auto-generated" : generatedStoreID)
-                                                .foregroundColor(generatedStoreID.isEmpty ? .secondary.opacity(0.5) : .primary)
-                                                .font(.system(size: 15))
-                                            Spacer()
-                                            if !generatedStoreID.isEmpty {
-                                                Image(systemName: "lock.fill")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.secondary)
-                                            }
-                                        }
-                                        .padding()
-                                        .background(Color(uiColor: .systemGray6).opacity(0.7))
-                                        .cornerRadius(10)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
-                                        )
-                                        if !detectedRegionCode.isEmpty {
-                                            Text("Region: \(detectedRegionCode)")
-                                                .font(.system(size: 9, weight: .medium))
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                    
-                                    // Store Name — second (right), user-editable
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("STORE NAME")
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .foregroundColor(.secondary)
-                                        TextField("e.g. London flagship", text: $storeName)
-                                            .padding()
-                                            .background(Color(uiColor: .systemGray6))
-                                            .cornerRadius(10)
-                                    }
-                                }
-                                
-                                // Location/Address field — English text only
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("LOCATION/ADDRESS")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundColor(.secondary)
-                                    HStack {
-                                        Image(systemName: "mappin.circle")
-                                            .foregroundColor(.secondary)
-                                        TextField("Search for address...", text: $address)
-                                            .autocorrectionDisabled()
-                                            .onChange(of: address) { _, newValue in
-                                                let sanitized = sanitizeToEnglish(newValue)
-                                                if sanitized != newValue {
-                                                    address = sanitized
-                                                }
-                                            }
-                                    }
-                                    .padding()
-                                    .background(Color(uiColor: .systemGray6))
-                                    .cornerRadius(10)
-                                }
-                                
-                                // Interactive Map — worldwide
-                                VStack(spacing: 0) {
-                                    ZStack {
-                                        Map(coordinateRegion: $mapRegion, interactionModes: .all, annotationItems: pinPlaced ? [MapPin(coordinate: selectedCoordinate)] : []) { pin in
-                                            MapAnnotation(coordinate: pin.coordinate) {
-                                                if pinPlaced {
-                                                    Image(systemName: "mappin.circle.fill")
-                                                        .font(.system(size: 30))
-                                                        .foregroundColor(.red)
-                                                        .shadow(radius: 4)
-                                                }
-                                            }
-                                        }
-                                        .frame(height: 260)
-                                        .cornerRadius(16)
-                                        
-                                        // Zoom Controls
-                                        VStack(spacing: 0) {
-                                            Button(action: {
-                                                withAnimation {
-                                                    mapRegion.span.latitudeDelta = max(mapRegion.span.latitudeDelta / 2, 0.01)
-                                                    mapRegion.span.longitudeDelta = max(mapRegion.span.longitudeDelta / 2, 0.01)
-                                                }
-                                            }) {
-                                                Image(systemName: "plus")
-                                                    .font(.title3.bold())
-                                                    .frame(width: 36, height: 36)
-                                                    .background(Color.white.opacity(0.9))
-                                                    .foregroundColor(.primary)
-                                            }
-                                            Divider()
-                                            Button(action: {
-                                                withAnimation {
-                                                    mapRegion.span.latitudeDelta = min(mapRegion.span.latitudeDelta * 2, 180)
-                                                    mapRegion.span.longitudeDelta = min(mapRegion.span.longitudeDelta * 2, 180)
-                                                }
-                                            }) {
-                                                Image(systemName: "minus")
-                                                    .font(.title3.bold())
-                                                    .frame(width: 36, height: 36)
-                                                    .background(Color.white.opacity(0.9))
-                                                    .foregroundColor(.primary)
-                                            }
-                                        }
-                                        .cornerRadius(8)
-                                        .shadow(radius: 4)
-                                        .padding(12)
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                                        
-                                        // Center crosshair when no pin is placed
-                                        if !pinPlaced {
-                                            Image(systemName: "plus")
-                                                .font(.system(size: 20, weight: .light))
-                                                .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.6))
-                                        }
-                                    }
-                                    
-                                    // Map action buttons
-                                    HStack(spacing: 12) {
-                                        Button(action: {
-                                            selectedCoordinate = mapRegion.center
-                                            pinPlaced = true
-                                            reverseGeocode(coordinate: selectedCoordinate)
-                                            detectRegionAndGenerateID(coordinate: selectedCoordinate)
-                                        }) {
-                                            HStack(spacing: 6) {
-                                                Image(systemName: "mappin.and.ellipse")
-                                                    .font(.system(size: 12))
-                                                Text("Drop Pin Here")
-                                                    .font(.system(size: 12, weight: .semibold))
-                                            }
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(Color(red: 0.1, green: 0.2, blue: 0.4))
-                                            .cornerRadius(8)
-                                        }
-                                        
-                                        Button(action: {
-                                            fetchCurrentLocation()
-                                        }) {
-                                            HStack(spacing: 6) {
-                                                if isLocating {
-                                                    ProgressView()
-                                                        .scaleEffect(0.7)
-                                                } else {
-                                                    Image(systemName: "location.fill")
-                                                        .font(.system(size: 12))
-                                                }
-                                                Text("Use My Location")
-                                                    .font(.system(size: 12, weight: .semibold))
-                                            }
-                                            .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(Color(uiColor: .systemGray6))
-                                            .cornerRadius(8)
-                                        }
-                                        .disabled(isLocating)
-                                        
-                                        if pinPlaced {
-                                            Button(action: {
-                                                pinPlaced = false
-                                                address = ""
-                                                generatedStoreID = ""
-                                                detectedRegionCode = ""
-                                            }) {
-                                                HStack(spacing: 6) {
-                                                    Image(systemName: "xmark.circle")
-                                                        .font(.system(size: 12))
-                                                    Text("Clear Pin")
-                                                        .font(.system(size: 12, weight: .semibold))
-                                                }
-                                                .foregroundColor(.red)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 8)
-                                                .background(Color.red.opacity(0.08))
-                                                .cornerRadius(8)
-                                            }
-                                        }
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.top, 12)
-                                }
-                            }
-                            .padding(24)
-                            .background(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        // Right Column
-                        VStack(alignment: .leading, spacing: 24) {
-                            // Operational Details
-                            VStack(alignment: .leading, spacing: 24) {
-                                Text("Operational Details")
-                                    .font(.headline)
-                                    .padding(.bottom, 4)
-                                
-                                // Store Type
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text("STORE TYPE")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundColor(.secondary)
-                                    
-                                    HStack(spacing: 0) {
-                                        ForEach(["Flagship", "Warehouse", "Boutique"], id: \.self) { type in
-                                            Button(action: { storeType = type }) {
-                                                Text(type)
-                                                    .font(.system(size: 12, weight: .semibold))
-                                                    .frame(maxWidth: .infinity)
-                                                    .padding(.vertical, 10)
-                                                    .background(storeType == type ? Color.white : Color.clear)
-                                                    .foregroundColor(storeType == type ? .primary : .secondary)
-                                                    .cornerRadius(6)
-                                                    .padding(2)
-                                            }
-                                        }
-                                    }
-                                    .background(Color(uiColor: .systemGray6))
-                                    .cornerRadius(8)
-                                }
-                                
-                                // Store Status
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("STORE STATUS")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundColor(.secondary)
-                                    HStack(spacing: 0) {
-                                        ForEach(StoreStatus.allCases, id: \.self) { status in
-                                            Button(action: { storeStatus = status }) {
-                                                Text(status.rawValue.capitalized)
-                                                    .font(.system(size: 11, weight: .semibold))
-                                                    .frame(maxWidth: .infinity)
-                                                    .padding(.vertical, 8)
-                                                    .background(storeStatus == status ? Color.white : Color.clear)
-                                                    .foregroundColor(storeStatus == status ? .primary : .secondary)
-                                                    .cornerRadius(6)
-                                                    .padding(2)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
-                                    .background(Color(uiColor: .systemGray6))
-                                    .cornerRadius(8)
-                                }
-                                
-                                // Opening Hours — no curved rectangle boxes around DatePickers
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text("OPENING HOURS")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundColor(.secondary)
-                                    
-                                    VStack(spacing: 16) {
-                                        HStack(spacing: 16) {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text("Opens at")
-                                                    .font(.system(size: 11, weight: .medium))
-                                                    .foregroundColor(.secondary)
-                                                DatePicker("", selection: $openingTime, displayedComponents: .hourAndMinute)
-                                                    .datePickerStyle(.compact)
-                                                    .labelsHidden()
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                            }
-                                            
-                                            Text("TO")
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(.secondary)
-                                                .padding(.top, 20)
-                                            
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text("Closes at")
-                                                    .font(.system(size: 11, weight: .medium))
-                                                    .foregroundColor(.secondary)
-                                                DatePicker("", selection: $closingTime, displayedComponents: .hourAndMinute)
-                                                    .datePickerStyle(.compact)
-                                                    .labelsHidden()
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // Weekend Operations — full text, no subtitle
-                                HStack {
-                                    Text("Weekend Operations")
-                                        .font(.system(size: 14, weight: .bold))
-                                    Spacer()
-                                    Toggle("", isOn: $weekendOps)
-                                        .labelsHidden()
-                                }
-                                .padding()
-                                .background(Color(uiColor: .systemGray6).opacity(0.5))
-                                .cornerRadius(12)
-                            }
-                            .padding(24)
-                            .background(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            
-                            // Store Media — Upload Image with Gallery/Camera
-                            VStack(alignment: .leading, spacing: 20) {
-                                Text("Store Media")
-                                    .font(.headline)
-                                
-                                if let image = selectedImage {
-                                    // Show selected image preview
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(uiImage: image)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(maxWidth: .infinity)
-                                            .frame(height: 180)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                                        
-                                        // Remove / Change buttons
-                                        HStack(spacing: 8) {
-                                            Button(action: {
-                                                showingImageSourceSheet = true
-                                            }) {
-                                                HStack(spacing: 4) {
-                                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                                        .font(.system(size: 10))
-                                                    Text("Change")
-                                                        .font(.system(size: 10, weight: .semibold))
-                                                }
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 6)
-                                                .background(Color.black.opacity(0.6))
-                                                .cornerRadius(8)
-                                            }
-                                            
-                                            Button(action: {
-                                                withAnimation {
-                                                    selectedImage = nil
-                                                }
-                                            }) {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .font(.system(size: 22))
-                                                    .foregroundColor(.white)
-                                                    .shadow(radius: 4)
-                                            }
-                                        }
-                                        .padding(10)
-                                    }
-                                } else {
-                                    // Upload placeholder
-                                    Button(action: {
-                                        showingImageSourceSheet = true
-                                    }) {
-                                        VStack(spacing: 12) {
-                                            Image(systemName: "photo.badge.plus")
-                                                .font(.system(size: 28))
-                                                .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                                                .padding(14)
-                                                .background(Color(uiColor: .systemGray6))
-                                                .cornerRadius(12)
-                                            
-                                            VStack(spacing: 4) {
-                                                Text("Upload Image")
-                                                    .font(.system(size: 14, weight: .bold))
-                                                Text("PNG/JPG up to 10MB")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.secondary)
-                                            }
-                                        }
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 32)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                                .foregroundColor(.secondary.opacity(0.3))
-                                        )
-                                    }
-                                    .foregroundColor(.primary)
-                                }
-                            }
-                            .padding(24)
-                            .background(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                        }
-                        .frame(width: 340)
-                    }
+                if useWideLayout {
+                    wideLayout
+                } else {
+                    compactLayout
                 }
-                .padding(32)
             }
-            .background(Color(uiColor: .systemGroupedBackground).opacity(0.5))
+            .background(Color(uiColor: .systemGroupedBackground))
             
-            // Bottom Bar — only Cancel and Save buttons
-            HStack {
-                Spacer()
-                
-                HStack(spacing: 16) {
-                    Button("Cancel") {
-                        onDismiss()
-                    }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 24)
-                    
-                    Button(action: { saveStore() }) {
-                        Text(editingStore == nil ? "Save Store Registry" : "Update Registry")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 14)
-                            .background(Color(red: 0.1, green: 0.2, blue: 0.4))
-                            .cornerRadius(10)
-                    }
-                }
-            }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 16)
-            .background(Color.white)
-            .overlay(Divider(), alignment: .top)
+            // ── Bottom Action Bar ──
+            bottomBar
         }
         .navigationBarHidden(true)
         .onAppear {
@@ -694,7 +284,6 @@ struct AddStoreView: View {
         }
         .onChange(of: locationManager.hasLocation) { _, newValue in
             if newValue, !pinPlaced {
-                // Center map on user's real-time location when first acquired
                 withAnimation(.easeInOut(duration: 0.6)) {
                     mapRegion = MKCoordinateRegion(
                         center: CLLocationCoordinate2D(
@@ -706,7 +295,466 @@ struct AddStoreView: View {
                 }
             }
         }
-        // Image source selection dialog
+
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(image: $selectedImage, sourceType: imageSourceType)
+        }
+    }
+    
+    // MARK: - Top Bar
+    
+    private var topBar: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Button(action: { onDismiss() }) {
+                Text("Close")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(uiColor: .systemBackground))
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
+            }
+            
+            Text(editingStore == nil ? "Add New Store" : "Edit Store")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+        .padding(.bottom, 4)
+        .background(Color(uiColor: .systemGroupedBackground))
+    }
+    
+    private var bottomBar: some View {
+        HStack(spacing: 16) {
+            Spacer()
+            
+            Button(action: { saveStore() }) {
+                HStack(spacing: 8) {
+                    Image(systemName: editingStore == nil ? "plus.circle.fill" : "checkmark.circle.fill")
+                        .font(.system(size: 15))
+                    Text(editingStore == nil ? "Create" : "Update")
+                        .font(.system(size: 15, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 12)
+                .background(FormTheme.navy)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial)
+        .overlay(
+            Rectangle()
+                .fill(Color.gray.opacity(0.12))
+                .frame(height: 1),
+            alignment: .top
+        )
+    }
+    
+    // MARK: - Wide Layout (iPad / Regular width)
+    
+    private var wideLayout: some View {
+        HStack(alignment: .top, spacing: 24) {
+            // Left Column
+            VStack(spacing: 20) {
+                locationMapSection
+                basicInfoSection
+            }
+            .frame(maxWidth: .infinity)
+            
+            // Right Column
+            VStack(spacing: 20) {
+                storeMediaSection
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .padding(28)
+    }
+    
+    // MARK: - Compact Layout (iPhone / Compact width)
+    
+    private var compactLayout: some View {
+        VStack(spacing: 20) {
+            locationMapSection
+            basicInfoSection
+            storeMediaSection
+        }
+        .padding(20)
+    }
+    
+    // MARK: - Section: Basic Information
+    
+    private var basicInfoSection: some View {
+        FormSectionCard(title: "Basic Information", icon: "building.2") {
+            VStack(spacing: 20) {
+                // Store ID & Store Name — side by side
+                HStack(alignment: .top, spacing: 16) {
+                    // Store ID
+                    VStack(alignment: .leading, spacing: 8) {
+                        FieldLabel(text: "Store ID")
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "number")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                            
+                            Text(generatedStoreID.isEmpty ? "Auto-generated" : generatedStoreID)
+                                .font(.system(size: 15, weight: generatedStoreID.isEmpty ? .regular : .semibold))
+                                .foregroundColor(generatedStoreID.isEmpty ? .secondary.opacity(0.5) : .primary)
+                            
+                            Spacer()
+                            
+                            if !generatedStoreID.isEmpty {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary.opacity(0.6))
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                        .background(FormTheme.fieldBackground.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: FormTheme.fieldCornerRadius))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: FormTheme.fieldCornerRadius)
+                                .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+                        )
+                        
+                        if !detectedRegionCode.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 9))
+                                Text("Region: \(detectedRegionCode)")
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                            .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    // Store Name
+                    VStack(alignment: .leading, spacing: 8) {
+                        FieldLabel(text: "Store Name")
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                            
+                            TextField("e.g. London Flagship", text: $storeName)
+                                .font(.system(size: 15))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                        .background(FormTheme.fieldBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: FormTheme.fieldCornerRadius))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                
+                // Store Status
+                VStack(alignment: .leading, spacing: 10) {
+                    FieldLabel(text: "Store Status")
+                    
+                    HStack(spacing: 0) {
+                        ForEach([StoreStatus.active, StoreStatus.maintenance], id: \.self) { status in
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) { storeStatus = status }
+                            }) {
+                                HStack(spacing: 5) {
+                                    Circle()
+                                        .fill(statusColor(for: status))
+                                        .frame(width: 6, height: 6)
+                                    Text(status.rawValue.capitalized)
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 11)
+                                .background(storeStatus == status ? Color.white : Color.clear)
+                                .foregroundColor(storeStatus == status ? .primary : .secondary)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .shadow(color: storeStatus == status ? Color.black.opacity(0.06) : .clear, radius: 3, y: 1)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(3)
+                        }
+                    }
+                    .background(FormTheme.fieldBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                
+                // Location / Address
+                VStack(alignment: .leading, spacing: 8) {
+                    FieldLabel(text: "Location / Address")
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.red.opacity(0.7))
+                        
+                        TextField("Search for address or drop a pin below…", text: $address)
+                            .font(.system(size: 15))
+                            .autocorrectionDisabled()
+                            .onChange(of: address) { _, newValue in
+                                let sanitized = sanitizeToEnglish(newValue)
+                                if sanitized != newValue {
+                                    address = sanitized
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 13)
+                    .background(FormTheme.fieldBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: FormTheme.fieldCornerRadius))
+                }
+            }
+        }
+    }
+    
+    // MARK: - Section: Location Map
+    
+    private var locationMapSection: some View {
+        FormSectionCard(title: "Pin Location", icon: "map") {
+            VStack(spacing: 16) {
+                // Map
+                ZStack {
+                    Map(coordinateRegion: $mapRegion, interactionModes: .all, annotationItems: pinPlaced ? [MapPin(coordinate: selectedCoordinate)] : []) { pin in
+                        MapAnnotation(coordinate: pin.coordinate) {
+                            if pinPlaced {
+                                VStack(spacing: 0) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.system(size: 34))
+                                        .foregroundColor(.red)
+                                        .shadow(color: .red.opacity(0.3), radius: 6, y: 2)
+                                    
+                                    Circle()
+                                        .fill(Color.red.opacity(0.2))
+                                        .frame(width: 8, height: 8)
+                                        .offset(y: -2)
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 280)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    
+                    // Zoom Controls
+                    VStack(spacing: 0) {
+                        Button(action: {
+                            withAnimation {
+                                mapRegion.span.latitudeDelta = max(mapRegion.span.latitudeDelta / 2, 0.01)
+                                mapRegion.span.longitudeDelta = max(mapRegion.span.longitudeDelta / 2, 0.01)
+                            }
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                                .frame(width: 36, height: 36)
+                                .background(.ultraThinMaterial)
+                                .foregroundColor(.primary)
+                        }
+                        Divider().frame(width: 36)
+                        Button(action: {
+                            withAnimation {
+                                mapRegion.span.latitudeDelta = min(mapRegion.span.latitudeDelta * 2, 180)
+                                mapRegion.span.longitudeDelta = min(mapRegion.span.longitudeDelta * 2, 180)
+                            }
+                        }) {
+                            Image(systemName: "minus")
+                                .font(.system(size: 16, weight: .bold))
+                                .frame(width: 36, height: 36)
+                                .background(.ultraThinMaterial)
+                                .foregroundColor(.primary)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    
+                    // Center crosshair when no pin
+                    if !pinPlaced {
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .light))
+                            .foregroundColor(FormTheme.navy.opacity(0.5))
+                    }
+                }
+                
+                // Map Action Buttons
+                HStack(spacing: 10) {
+                    Button(action: {
+                        selectedCoordinate = mapRegion.center
+                        pinPlaced = true
+                        reverseGeocode(coordinate: selectedCoordinate)
+                        detectRegionAndGenerateID(coordinate: selectedCoordinate)
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.system(size: 12))
+                            Text("Drop Pin")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(FormTheme.navy)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    
+                    Button(action: {
+                        fetchCurrentLocation()
+                    }) {
+                        HStack(spacing: 6) {
+                            if isLocating {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 12))
+                            }
+                            Text("My Location")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundColor(FormTheme.navy)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(FormTheme.navy.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .disabled(isLocating)
+                    
+                    if pinPlaced {
+                        Button(action: {
+                            withAnimation {
+                                pinPlaced = false
+                                address = ""
+                                generatedStoreID = ""
+                                detectedRegionCode = ""
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "xmark.circle")
+                                    .font(.system(size: 12))
+                                Text("Clear")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.red.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                
+                // Coordinates display
+                if pinPlaced {
+                    HStack(spacing: 16) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.and.down")
+                                .font(.system(size: 10))
+                            Text(String(format: "Lat: %.5f", selectedCoordinate.latitude))
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        }
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.left.and.right")
+                                .font(.system(size: 10))
+                            Text(String(format: "Lon: %.5f", selectedCoordinate.longitude))
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        }
+                        Spacer()
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+                }
+            }
+        }
+    }
+    
+
+    
+    // MARK: - Section: Store Media
+    
+    private var storeMediaSection: some View {
+        FormSectionCard(title: "Store Media", icon: "photo.on.rectangle.angled") {
+            if let image = selectedImage {
+                // Image preview
+                ZStack(alignment: .topTrailing) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    
+                    // Overlay buttons
+                    HStack(spacing: 8) {
+                        Button(action: { showingImageSourceSheet = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 10))
+                                Text("Change")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(.ultraThinMaterial.opacity(0.9))
+                            .background(Color.black.opacity(0.3))
+                            .clipShape(Capsule())
+                        }
+                        
+                        Button(action: {
+                            withAnimation { selectedImage = nil }
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.4), radius: 4)
+                        }
+                    }
+                    .padding(12)
+                }
+            } else {
+                // Upload placeholder
+                Button(action: { showingImageSourceSheet = true }) {
+                    VStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(FormTheme.navy.opacity(0.06))
+                                .frame(width: 56, height: 56)
+                            
+                            Image(systemName: "photo.badge.plus")
+                                .font(.system(size: 24))
+                                .foregroundColor(FormTheme.navy.opacity(0.7))
+                        }
+                        
+                        VStack(spacing: 4) {
+                            Text("Upload Store Image")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text("PNG or JPG, up to 10 MB")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                            .foregroundStyle(Color.secondary.opacity(0.25))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        // Image source selection dialog attached here so the iPad popover points to this section
         .confirmationDialog("Select Image Source", isPresented: $showingImageSourceSheet, titleVisibility: .visible) {
             Button("Choose from Gallery") {
                 imageSourceType = .photoLibrary
@@ -720,8 +768,15 @@ struct AddStoreView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .sheet(isPresented: $showingImagePicker) {
-            ImagePicker(image: $selectedImage, sourceType: imageSourceType)
+    }
+    
+    // MARK: - Helpers
+    
+    private func statusColor(for status: StoreStatus) -> Color {
+        switch status {
+        case .active: return .green
+        case .maintenance: return .orange
+        case .inventory: return .blue
         }
     }
     

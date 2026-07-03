@@ -9,44 +9,44 @@ struct DashboardHeaderView: View {
                 Text("Dashboard")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
-                Text("Overview of your retail operations")
-                    .font(.system(size: 15))
-                    .foregroundColor(.secondary)
+//                Text("Overview of your retail operations")
+//                    .font(.system(size: 15))
+//                    .foregroundColor(.secondary)
             }
             
             Spacer()
             
             // Search Bar
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField("Search stores, products, managers...", text: $searchText)
-                    .font(.system(size: 15))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(uiColor: .systemGray6))
-            .clipShape(Capsule())
-            .frame(maxWidth: 350)
-            
+//            HStack(spacing: 8) {
+//                Image(systemName: "magnifyingglass")
+//                    .foregroundColor(.secondary)
+//                TextField("Search stores, products, managers...", text: $searchText)
+//                    .font(.system(size: 15))
+//            }
+//            .padding(.horizontal, 16)
+//            .padding(.vertical, 12)
+//            .background(Color(uiColor: .systemGray6))
+//            .clipShape(Capsule())
+//            .frame(maxWidth: 350)
+//
             Spacer(minLength: 12).frame(maxWidth: 24)
             
             // Notification Bell
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.primary)
-                
-                Circle()
-                    .fill(Color.red)
-                    .frame(width: 14, height: 14)
-                    .overlay(
-                        Text("2")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.white)
-                    )
-                    .offset(x: 4, y: -4)
-            }
+//            ZStack(alignment: .topTrailing) {
+//                Image(systemName: "bell.fill")
+//                    .font(.system(size: 20))
+//                    .foregroundColor(.primary)
+//                
+//                Circle()
+//                    .fill(Color.red)
+//                    .frame(width: 14, height: 14)
+//                    .overlay(
+//                        Text("2")
+//                            .font(.system(size: 9, weight: .bold))
+//                            .foregroundColor(.white)
+//                    )
+//                    .offset(x: 4, y: -4)
+//            }
             
              Spacer(minLength: 8).frame(maxWidth: 20)
             
