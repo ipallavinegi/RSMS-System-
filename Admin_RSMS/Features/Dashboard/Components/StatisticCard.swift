@@ -25,16 +25,20 @@ struct StatisticCard: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.uppercased())
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Color.secondary.opacity(0.8))
                         .tracking(0.8)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     
                     Text(title)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .bold))
@@ -51,15 +55,18 @@ struct StatisticCard: View {
             // ── Footnote ────────────────────────────────────────
             HStack(spacing: 3) {
                 Text(footnoteLeft)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Color.primary)
+                    .lineLimit(1)
                 Text(footnoteRight)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
-        .padding(24) // Added more padding to make it breathable
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading) // Ensures full stretch!
+        .padding(24) // Reverted back to 24 for proper spacing and matching height
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(uiColor: .secondarySystemGroupedBackground),
                     in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(

@@ -10,10 +10,12 @@ struct DashboardGrid<Content: View>: View {
         self.content = content()
     }
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
+    private var columns: [GridItem] {
+        [
+            GridItem(.flexible(), spacing: spacing, alignment: .top),
+            GridItem(.flexible(), spacing: spacing, alignment: .top)
+        ]
+    }
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: spacing) {
