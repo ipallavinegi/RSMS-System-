@@ -26,8 +26,6 @@ struct ProductsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            headerView
-
             filterBar
 
             Group {
@@ -107,47 +105,8 @@ struct ProductsView: View {
             Text("A reason is required to reject, but it isn't saved anywhere.")
         }
         .navigationTitle("Products")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .statusBarHidden()
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.primary)
-                }
-            }
-        }
-    }
-
-    private var headerView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField("Search products by name, brand or SKU...", text: $searchText)
-                    .textFieldStyle(.plain)
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .clipShape(Capsule())
-        }
-        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
-        .padding(.top, 24)
-        .padding(.bottom, 16)
-        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $searchText, prompt: "Search products by name, brand or SKU...")
     }
 
     /// Horizontal filter bar — just All and Pending, each labelled with a

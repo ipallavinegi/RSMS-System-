@@ -166,7 +166,6 @@ struct DashboardView: View {
             .padding(.top, 16)
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .statusBarHidden()
         .task {
             await viewModel.load()
         }

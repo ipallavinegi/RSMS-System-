@@ -30,9 +30,6 @@ struct ManagersView: View {
             .background(Color(uiColor: .systemGroupedBackground))
         } else {
             VStack(spacing: 0) {
-                // Header (same as before)
-                headerView
-                
                 // Grid
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
@@ -59,6 +56,7 @@ struct ManagersView: View {
                 }
                 .background(Color(uiColor: .systemGroupedBackground))
             }
+            .searchable(text: $searchText, prompt: "Search managers, roles, or locations...")
             .alert("Error", isPresented: Binding(
                 get: { dataManager.errorMessage != nil },
                 set: { if !$0 { dataManager.errorMessage = nil } }
@@ -92,58 +90,18 @@ struct ManagersView: View {
                 })
             }
             .navigationTitle("Managers")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .statusBarHidden()
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                }
-            }
-        }
-    }
-    
-    private var headerView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Search manager, roles, or locations...", text: $searchText)
-                        .textFieldStyle(.plain)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                .clipShape(Capsule())
                 
-                Button(action: { showingAddMember = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Create")
-                            .font(.system(size: 15, weight: .semibold))
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddMember = true }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.accentColor)
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 12)
-                    .background(Color.accentColor)
-                    .clipShape(Capsule())
                 }
             }
         }
-        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
-        .padding(.top, 24)
-        .padding(.bottom, 16)
-        .background(Color(uiColor: .systemGroupedBackground))
-    }
-    
-    private var filterBar: some View {
-        EmptyView()
     }
 }
 

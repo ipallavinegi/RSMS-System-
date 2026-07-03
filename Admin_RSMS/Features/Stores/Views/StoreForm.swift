@@ -180,6 +180,7 @@ struct FormSectionCard<Content: View>: View {
             
             content()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(24)
         .background(FormTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: FormTheme.cornerRadius, style: .continuous))

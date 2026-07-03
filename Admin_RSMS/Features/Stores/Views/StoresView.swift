@@ -97,44 +97,37 @@ struct StoresView: View {
             .background(Color(uiColor: .systemGroupedBackground))
         } else {
             VStack(spacing: 0) {
-                // Header Area
-                headerView
-                
-                VStack(alignment: .leading, spacing: 20) {
-                    if viewMode == .grid {
-                        // Grid of Stores
-                        ScrollView {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
-                                ForEach(filteredStores) { store in
-                                    StoreCard(store: store, onEdit: {
-                                        storeToEdit = store
-                                    }, onDelete: {
-                                        dataManager.removeStore(store)
-                                    }, onRestore: {
-                                        var restored = store
-                                        restored.isArchived = false
-                                        dataManager.updateStore(restored)
-                                    })
-                                    .frame(width: cardWidth)
-                                    .onTapGesture {
-                                        selectedStoreForDetails = store
-                                    }
+                if viewMode == .grid {
+                    // Grid of Stores
+                    ScrollView {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
+                            ForEach(filteredStores) { store in
+                                StoreCard(store: store, onEdit: {
+                                    storeToEdit = store
+                                }, onDelete: {
+                                    dataManager.removeStore(store)
+                                }, onRestore: {
+                                    var restored = store
+                                    restored.isArchived = false
+                                    dataManager.updateStore(restored)
+                                })
+                                .frame(width: cardWidth)
+                                .onTapGesture {
+                                    selectedStoreForDetails = store
                                 }
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, sizeClass == .compact ? 16 : 32)
-                            .padding(.top, 32)
-                            .padding(.bottom, 100)
                         }
-                    } else {
-                        // Full Screen Map with optional details sidebar
-                        mapViewContent
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
+                        .padding(.top, 16)
+                        .padding(.bottom, 100)
                     }
+                } else {
+                    // Full Screen Map with optional details sidebar
+                    mapViewContent
                 }
-                .padding(.bottom, 0)
-                
-                Spacer()
             }
+            .searchable(text: $searchText, prompt: "Search stores or managers...")
             .background(Color(uiColor: .systemGroupedBackground))
             .alert("Error", isPresented: Binding(
                 get: { dataManager.errorMessage != nil },
@@ -178,15 +171,25 @@ struct StoresView: View {
                 })
             }
             .navigationTitle("Stores")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .statusBarHidden()
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "chevron.left")
+                
+                ToolbarItem(placement: .principal) {
+                    Picker("View", selection: $viewMode) {
+                        Text("Grid").tag(ViewMode.grid)
+                        Text("Map").tag(ViewMode.map)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
+                }
+                
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    sortMenu
+                    
+                    Button(action: { showingAddStore = true }) {
+                        Image(systemName: "plus")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.accentColor)
                     }
                 }
             }
@@ -574,95 +577,6 @@ struct StoresView: View {
         }
     }
     
-    // MARK: - Subviews
-    
-    private var headerView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            
-            if sizeClass == .compact {
-                VStack(spacing: 12) {
-                    HStack(spacing: 12) {
-                        searchBar
-                        createButton
-                    }
-                    HStack {
-                        gridMapToggle
-                        Spacer()
-                        sortMenu
-                    }
-                }
-            } else {
-                HStack(spacing: 12) {
-                    searchBar
-                    createButton
-                    Spacer()
-                    gridMapToggle
-                    sortMenu
-                }
-            }
-        }
-        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
-        .padding(.top, 24)
-        .padding(.bottom, 16)
-        .background(Color(uiColor: .systemGroupedBackground))
-    }
-    
-    private var searchBar: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-            TextField("Search stores or managers...", text: $searchText)
-                .textFieldStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(Capsule())
-    }
-    
-    private var createButton: some View {
-        Button(action: { showingAddStore = true }) {
-            HStack(spacing: 6) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("Create")
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(Color.accentColor)
-            .clipShape(Capsule())
-        }
-    }
-    
-    private var gridMapToggle: some View {
-        HStack(spacing: 0) {
-            Button(action: {
-                withAnimation {
-                    viewMode = .grid
-                    selectedMapStore = nil
-                }
-            }) {
-                Label("Grid", systemImage: "square.grid.2x2")
-                    .font(.system(size: 13, weight: viewMode == .grid ? .bold : .medium))
-                    .foregroundColor(viewMode == .grid ? .blue : .secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-            }
-            Divider().frame(height: 16)
-            Button(action: { withAnimation { viewMode = .map } }) {
-                Label("Map", systemImage: "map")
-                    .font(.system(size: 13, weight: viewMode == .map ? .bold : .medium))
-                    .foregroundColor(viewMode == .map ? .blue : .secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-            }
-        }
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .cornerRadius(8)
-    }
-    
     private var sortMenu: some View {
         Menu {
             Button("Name (A-Z)", action: { activeSort = .nameAscending })
@@ -670,13 +584,9 @@ struct StoresView: View {
             Button("Store ID", action: { activeSort = .storeIDAscending })
             Button("Manager Name", action: { activeSort = .managerNameAscending })
         } label: {
-            Label("Sort", systemImage: "arrow.up.arrow.down")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.primary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                .cornerRadius(8)
+            Image(systemName: "arrow.up.arrow.down")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.accentColor)
         }
     }
 }
