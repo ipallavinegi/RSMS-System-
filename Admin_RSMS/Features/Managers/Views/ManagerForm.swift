@@ -11,6 +11,9 @@ struct ManagerForm: View {
     @State private var emailAddress: String
     @State private var selectedStore: String
     
+    @State private var showingValidationAlert = false
+    @State private var validationMessage = ""
+    
     init(memberToEdit: Manager? = nil, onDismiss: @escaping () -> Void, onSave: @escaping (Manager) -> Void) {
         self.memberToEdit = memberToEdit
         self.onDismiss = onDismiss
@@ -77,6 +80,13 @@ struct ManagerForm: View {
             bottomBar
         }
         .navigationBarHidden(true)
+        .alert(isPresented: $showingValidationAlert) {
+            Alert(
+                title: Text("Missing Information"),
+                message: Text(validationMessage),
+                dismissButton: .default(Text("OK"))
+            )
+        }
     }
     
     private var topBar: some View {
@@ -108,21 +118,40 @@ struct ManagerForm: View {
             Spacer()
             
             Button(action: {
-                if !fullName.isEmpty {
-                    let initials = fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
-                    
-                    let member = Manager(
-                        id: memberToEdit?.id ?? UUID(),
-                        name: fullName,
-                        email: emailAddress,
-                        role: "Manager",  // Hardcoded to Manager as required
-                        location: selectedStore.isEmpty ? "Assigned Store" : selectedStore,
-                        shift: memberToEdit?.shift ?? "New Hire",
-                        imageName: memberToEdit?.imageName,
-                        initials: initials.isEmpty ? "?" : initials
-                    )
-                    onSave(member)
+                let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmedEmail = emailAddress.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                
+                if trimmedName.isEmpty {
+                    validationMessage = "Please enter the manager's full name."
+                    showingValidationAlert = true
+                    return
                 }
+                
+                if trimmedEmail.isEmpty || !trimmedEmail.hasSuffix("@gmail.com") {
+                    validationMessage = "Please enter a valid Gmail address (must end with @gmail.com)."
+                    showingValidationAlert = true
+                    return
+                }
+                
+                if selectedStore.isEmpty {
+                    validationMessage = "Please select a store to assign the manager to."
+                    showingValidationAlert = true
+                    return
+                }
+                
+                let initials = trimmedName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+                
+                let member = Manager(
+                    id: memberToEdit?.id ?? UUID(),
+                    name: trimmedName,
+                    email: trimmedEmail,
+                    role: "Manager",  // Hardcoded to Manager as required
+                    location: selectedStore,
+                    shift: memberToEdit?.shift ?? "New Hire",
+                    imageName: memberToEdit?.imageName,
+                    initials: initials.isEmpty ? "?" : initials
+                )
+                onSave(member)
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: memberToEdit == nil ? "person.badge.plus" : "checkmark.circle.fill")
@@ -136,8 +165,6 @@ struct ManagerForm: View {
                 .background(Color(red: 0.1, green: 0.2, blue: 0.4))
                 .clipShape(Capsule())
             }
-            .disabled(fullName.isEmpty)
-            .opacity(fullName.isEmpty ? 0.5 : 1.0)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 14)

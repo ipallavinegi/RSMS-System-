@@ -7,6 +7,7 @@ struct ManagersView: View {
     @State private var searchText = ""
     @State private var showingAddMember = false
     @State private var memberToEdit: Manager? = nil
+    @State private var managerToView: Manager? = nil
     private let cardWidth: CGFloat = 300
     
     var filteredMembers: [Manager] {
@@ -36,16 +37,21 @@ struct ManagersView: View {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
                         ForEach(filteredMembers) { member in
-                            ManagerCard(member: member, onEdit: {
-                                memberToEdit = member
-                            }, onDelete: {
-                                dataManager.removeManager(member)
-                            }, onRestore: {
-                                var restored = member
-                                restored.isArchived = false
-                                dataManager.updateManager(restored)
-                            })
-                            .frame(width: cardWidth)
+                            Button(action: {
+                                managerToView = member
+                            }) {
+                                ManagerCard(member: member, onEdit: {
+                                    memberToEdit = member
+                                }, onDelete: {
+                                    dataManager.removeManager(member)
+                                }, onRestore: {
+                                    var restored = member
+                                    restored.isArchived = false
+                                    dataManager.updateManager(restored)
+                                })
+                                .frame(width: cardWidth)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -81,6 +87,12 @@ struct ManagersView: View {
                     dataManager.updateManager(updatedMember)
                     memberToEdit = nil
                 })
+            }
+            .sheet(item: $managerToView) { manager in
+                ManagerDetailModalView(
+                    manager: manager,
+                    onDismiss: { managerToView = nil }
+                )
             }
             .navigationTitle("Managers")
             .navigationBarTitleDisplayMode(.inline)

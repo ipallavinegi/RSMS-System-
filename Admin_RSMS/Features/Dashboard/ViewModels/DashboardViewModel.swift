@@ -99,9 +99,10 @@ final class DashboardViewModel: ObservableObject {
     // Core KPIs
     @Published var networkStoresActive: Int = 47
     @Published var networkStoresTotal: Int = 50
-    @Published var inventoryProductsCount: Int = 1240
-    @Published var staffingManagersCount: Int = 45
-    @Published var staffingManagersTotal: Int = 50
+    @Published var inventoryProductsCount: Int = 0
+    @Published var inventoryProductsTotal: Int = 0
+    @Published var staffingManagersCount: Int = 0
+    @Published var staffingManagersTotal: Int = 0
     @Published var marketingPromosCount: Int = 0
 
     // Detailed metrics
@@ -112,9 +113,43 @@ final class DashboardViewModel: ObservableObject {
     private let service: DashboardServicing
     private var data: DashboardData?
     private let calendar = Calendar.current
+    private var cancellables = Set<AnyCancellable>()
 
     init(service: DashboardServicing? = nil) {
         self.service = service ?? SupabaseDashboardService()
+        setupRealtimeSync()
+    }
+    
+    private func setupRealtimeSync() {
+        let dm = RSMSDataManager.shared
+        
+        dm.$stores
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] stores in
+                guard !stores.isEmpty else { return }
+                self?.networkStoresTotal = stores.count
+                self?.networkStoresActive = stores.filter { $0.status == .active }.count
+            }
+            .store(in: &cancellables)
+            
+        dm.$managers
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] managers in
+                guard !managers.isEmpty else { return }
+                self?.staffingManagersTotal = managers.count
+                // Counting non-archived managers as "active"
+                self?.staffingManagersCount = managers.filter { !$0.isArchived }.count
+            }
+            .store(in: &cancellables)
+            
+        dm.$products
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] products in
+                guard !products.isEmpty else { return }
+                self?.inventoryProductsTotal = products.count
+                self?.inventoryProductsCount = products.filter { $0.approvalStatus == ApprovalStatus.approved.rawValue }.count
+            }
+            .store(in: &cancellables)
     }
 
     func load() async {
@@ -206,17 +241,26 @@ final class DashboardViewModel: ObservableObject {
             .map { $0 }
             
         // Populate core KPIs dynamically based on db lists, falling back to gorgeous design numbers when db lists are sparse or demo
-        let dbActiveStores = data.stores.filter { $0.status.lowercased() == "active" }.count
-        let dbTotalStores = data.stores.count
-        networkStoresActive = dbTotalStores > 1 ? dbActiveStores : 47
-        networkStoresTotal = dbTotalStores > 1 ? dbTotalStores : 50
+        // (Wait, we're now syncing from RSMSDataManager in realtime, so we don't need to rebuild them from `data` unless they are empty)
+        
+        if RSMSDataManager.shared.stores.isEmpty {
+            let dbActiveStores = data.stores.filter { $0.status.lowercased() == "active" }.count
+            let dbTotalStores = data.stores.count
+            networkStoresActive = dbTotalStores > 1 ? dbActiveStores : 47
+            networkStoresTotal = dbTotalStores > 1 ? dbTotalStores : 50
+        }
 
-        let dbProductsCount = data.products.count
-        inventoryProductsCount = dbProductsCount > 2 ? dbProductsCount : 1240
+        if RSMSDataManager.shared.products.isEmpty {
+            let dbProductsCount = data.products.count
+            inventoryProductsTotal = dbProductsCount > 2 ? dbProductsCount : 1240
+            inventoryProductsCount = dbProductsCount > 2 ? data.products.filter({ $0.approvalStatus == ApprovalStatus.approved.rawValue }).count : 3
+        }
 
-        let dbManagersCount = data.users.count // simple fallback
-        staffingManagersCount = dbManagersCount > 3 ? dbManagersCount : 45
-        staffingManagersTotal = 50
+        if RSMSDataManager.shared.managers.isEmpty {
+            let dbManagersCount = data.users.count // simple fallback
+            staffingManagersCount = dbManagersCount > 3 ? dbManagersCount : 45
+            staffingManagersTotal = 50
+        }
 
         // Live campaigns = promotions whose schedule currently overlaps today,
         // pulled straight from PromotionService (same source as the Promotions screen).

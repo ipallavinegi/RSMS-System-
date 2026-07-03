@@ -28,6 +28,7 @@ struct StoresView: View {
     @State private var searchText = ""
     @State private var showingAddStore = false
     @State private var storeToEdit: AdminStore? = nil
+    @State private var storeToView: AdminStore? = nil
     @State private var activeSort: StoreSortOption = .nameAscending
     
     // UI Constants
@@ -105,16 +106,21 @@ struct StoresView: View {
                         ScrollView {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
                                 ForEach(filteredStores) { store in
-                                    StoreCard(store: store, onEdit: {
-                                        storeToEdit = store
-                                    }, onDelete: {
-                                        dataManager.removeStore(store)
-                                    }, onRestore: {
-                                        var restored = store
-                                        restored.isArchived = false
-                                        dataManager.updateStore(restored)
-                                    })
-                                    .frame(width: cardWidth)
+                                    Button(action: {
+                                        storeToView = store
+                                    }) {
+                                        StoreCard(store: store, onEdit: {
+                                            storeToEdit = store
+                                        }, onDelete: {
+                                            dataManager.removeStore(store)
+                                        }, onRestore: {
+                                            var restored = store
+                                            restored.isArchived = false
+                                            dataManager.updateStore(restored)
+                                        })
+                                        .frame(width: cardWidth)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -166,6 +172,12 @@ struct StoresView: View {
                         dataManager.updateStore(updatedStore)
                         storeToEdit = nil
                     }
+                )
+            }
+            .sheet(item: $storeToView) { store in
+                StoreDetailModalView(
+                    store: store,
+                    onDismiss: { storeToView = nil }
                 )
             }
             .navigationTitle("Stores")

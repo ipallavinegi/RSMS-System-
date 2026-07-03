@@ -352,6 +352,8 @@
 				DEVELOPMENT_TEAM = VACG5C2JP3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RSMS needs microphone access to record your voice for promotion descriptions.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "RSMS needs speech recognition to transcribe your voice for promotion descriptions.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -384,6 +386,8 @@
 				DEVELOPMENT_TEAM = VACG5C2JP3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RSMS needs microphone access to record your voice for promotion descriptions.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "RSMS needs speech recognition to transcribe your voice for promotion descriptions.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
