@@ -11,9 +11,7 @@ struct StoreDetailModalView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            
+        NavigationStack {
             ScrollView {
                 if sizeClass == .regular {
                     wideLayout
@@ -22,36 +20,17 @@ struct StoreDetailModalView: View {
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(store.name)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: onDismiss)
+                }
+            }
         }
         .task {
             await fetchEmployees()
         }
-    }
-    
-    // MARK: - Top Bar
-    
-    private var topBar: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Button(action: { onDismiss() }) {
-                Text("Close")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(uiColor: .systemBackground))
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
-            }
-            
-            Text(store.name)
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 4)
-        .background(Color(uiColor: .systemGroupedBackground))
     }
     
     // MARK: - Layouts

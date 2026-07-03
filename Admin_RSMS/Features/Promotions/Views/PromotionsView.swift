@@ -14,226 +14,76 @@ struct PromotionsView: View {
     private let cardWidth: CGFloat = 320
     
     private var filteredPromotions: [AdminPromotion] {
-        
-        guard !searchText.isEmpty else {
-            return service.promotions
-        }
-        
+        guard !searchText.isEmpty else { return service.promotions }
         return service.promotions.filter {
-            $0.promotionName.localizedCaseInsensitiveContains(searchText)
-            ||
-            ($0.description?.localizedCaseInsensitiveContains(searchText) ?? false)
+            $0.promotionName.localizedCaseInsensitiveContains(searchText) || ($0.description?.localizedCaseInsensitiveContains(searchText) ?? false)
         }
     }
     
     var body: some View {
-        
         VStack(spacing: 0) {
-            
-            headerView
-            
             Group {
-                
                 if service.isLoading {
-                    
                     ProgressView("Loading Promotions...")
-                        .frame(maxWidth: .infinity,
-                               maxHeight: .infinity)
-                    
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if filteredPromotions.isEmpty {
-                    
                     ContentUnavailableView(
                         "No Promotions Yet",
                         systemImage: "tag",
-                        description: Text(
-                            "Create your first promotional campaign."
-                        )
+                        description: Text("Create your first promotional campaign.")
                     )
-                    
                 } else {
-                    
                     ScrollView {
-                        
                         LazyVGrid(
-                            columns: [
-                                GridItem(
-                                    .adaptive(
-                                        minimum: cardWidth,
-                                        maximum: cardWidth
-                                    ),
-                                    spacing: 20,
-                                    alignment: .top
-                                )
-                            ],
+                            columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)],
                             alignment: .leading,
                             spacing: 20
                         ) {
-                            
                             ForEach(filteredPromotions) { promotion in
-                                
                                 PromoCard(
                                     promotion: promotion,
-                                    onTap: {
-                                        editingPromotion = promotion
-                                    }
+                                    onTap: { editingPromotion = promotion }
                                 )
                                 .frame(width: cardWidth)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(
-                            .horizontal,
-                            sizeClass == .compact ? 16 : 32
-                        )
+                        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
                         .padding(.top, 24)
                         .padding(.bottom, 100)
                     }
                 }
             }
-            .frame(
-                maxWidth: .infinity,
-                maxHeight: .infinity
-            )
-            .background(
-                Color(uiColor: .systemGroupedBackground)
-            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
         }
         .navigationTitle("Promotions")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .statusBarHidden()
-        .task {
-            await service.fetchPromotions()
-        }
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $searchText, prompt: "Search promotions...")
+        .task { await service.fetchPromotions() }
         .toolbar {
-            
-            ToolbarItem(
-                placement: .navigationBarLeading
-            ) {
-                
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    dismiss()
+                    showingAddPromotion = true
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .font(
-                            .system(
-                                size: 18,
-                                weight: .semibold
-                            )
-                        )
-                        .foregroundColor(.primary)
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.accentColor)
                 }
             }
         }
-        .sheet(
-            isPresented: $showingAddPromotion
-        ) {
-            
+        .sheet(isPresented: $showingAddPromotion) {
             AddPromotionView(
-                onDismiss: {
-                    showingAddPromotion = false
-                },
-                onSaved: { _ in
-                    
-                    Task {
-                        await service.fetchPromotions()
-                    }
-                }
+                onDismiss: { showingAddPromotion = false },
+                onSaved: { _ in Task { await service.fetchPromotions() } }
             )
         }
-        .sheet(
-            item: $editingPromotion
-        ) { promotion in
-            
+        .sheet(item: $editingPromotion) { promotion in
             AddPromotionView(
                 editingPromotion: promotion,
-                onDismiss: {
-                    editingPromotion = nil
-                },
-                onSaved: { _ in
-                    
-                    Task {
-                        await service.fetchPromotions()
-                    }
-                }
+                onDismiss: { editingPromotion = nil },
+                onSaved: { _ in Task { await service.fetchPromotions() } }
             )
         }
-    }
-    
-    // MARK: - Header
-    
-    private var headerView: some View {
-        
-        HStack(spacing: 12) {
-            
-            HStack(spacing: 12) {
-                
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                
-                TextField(
-                    "Search promotions...",
-                    text: $searchText
-                )
-                .textFieldStyle(.plain)
-                
-                if !searchText.isEmpty {
-                    
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(
-                            systemName: "xmark.circle.fill"
-                        )
-                        .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                Color(
-                    uiColor:
-                        .secondarySystemGroupedBackground
-                )
-            )
-            .clipShape(Capsule())
-            .frame(maxWidth: .infinity)
-            
-            Button {
-                showingAddPromotion = true
-            } label: {
-                
-                HStack(spacing: 8) {
-                    
-                    Image(systemName: "plus.circle.fill")
-                    
-                    Text("Create")
-                }
-                .font(
-                    .system(
-                        size: 15,
-                        weight: .semibold
-                    )
-                )
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    Color.blue,
-                    in: Capsule()
-                )
-            }
-        }
-        .padding(
-            .horizontal,
-            sizeClass == .compact ? 16 : 32
-        )
-        .padding(.top, 24)
-        .padding(.bottom, 16)
-        .background(
-            Color(uiColor: .systemGroupedBackground)
-        )
     }
 }
