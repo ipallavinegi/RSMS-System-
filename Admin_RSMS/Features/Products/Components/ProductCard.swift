@@ -19,22 +19,27 @@ struct ProductCard: View {
     private let imageHeight: CGFloat = 160
 
     var body: some View {
-        // The whole card is itself a Button (tap anywhere opens detail), and the
-        // Approve/Reject buttons below are nested with `.buttonStyle(.borderless)`.
-        // This is the pattern that lets inner buttons work correctly — an
-        // `.onTapGesture` on the outer card would fire *alongside* inner Button
-        // taps instead of yielding to them, which is why Approve/Reject looked
-        // broken before.
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 0) {
-                imageSection
-                infoSection
-            }
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        // NOTE: the card is intentionally NOT a Button anymore. Nesting a
+        // Button (Approve/Reject) inside another Button (the card) only
+        // hit-tests correctly inside a List; in a plain VStack/LazyVGrid like
+        // this one, the outer Button swallows the tap before the inner
+        // buttons ever see it, so Approve/Reject silently opened the detail
+        // sheet instead of firing their own actions.
+        //
+        // Instead: the card itself just listens for taps via onTapGesture,
+        // and Approve/Reject are the only real Buttons. Since Buttons take
+        // hit-testing priority over a sibling/ancestor's onTapGesture, taps
+        // on them are consumed correctly and no longer leak through to
+        // onSelect.
+        VStack(alignment: .leading, spacing: 0) {
+            imageSection
+            infoSection
         }
-        .buttonStyle(.plain)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onSelect)
     }
 
     /// Image always fills the same box edge-to-edge (aspect-fill + clip).
