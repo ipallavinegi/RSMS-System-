@@ -8,8 +8,8 @@ struct StoreCard: View {
     var onRestore: (() -> Void)? = nil
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Image Section
+        VStack(spacing: 0) {
+            // Hero Image Section
             ZStack(alignment: .topTrailing) {
                 if let imageUrlString = store.imageUrl, let url = URL(string: imageUrlString) {
                     AsyncImage(url: url) { phase in
@@ -17,13 +17,13 @@ struct StoreCard: View {
                         case .empty:
                             ProgressView()
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 120)
+                                .frame(height: 160)
                         case .success(let image):
                             image
                                 .resizable()
                                 .scaledToFill()
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 120)
+                                .frame(height: 160)
                                 .clipped()
                         case .failure:
                             fallbackImage
@@ -36,43 +36,46 @@ struct StoreCard: View {
                         .resizable()
                         .scaledToFill()
                         .frame(maxWidth: .infinity)
-                        .frame(height: 120)
+                        .frame(height: 160)
                         .clipped()
                 } else {
                     fallbackImage
                 }
+                
                 if store.isArchived {
-                    Text("DELETED")
-                        .font(.system(size: 8, weight: .bold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.red)
+                    Text("ARCHIVED")
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.black.opacity(0.6))
                         .foregroundColor(.white)
-                        .cornerRadius(4)
-                        .padding(8)
+                        .clipShape(Capsule())
+                        .padding(12)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 120)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .padding(6)
+            .frame(height: 160)
             
-            // Info Section
-            VStack(alignment: .leading, spacing: 10) {
+            // Content Section
+            VStack(alignment: .leading, spacing: 14) {
+                // Title Row
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(store.name)
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.primary)
+                            .lineLimit(1)
                         
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "mappin.circle")
+                                .font(.system(size: 11))
                             Text(store.address)
+                                .font(.system(size: 11, weight: .medium))
                         }
-                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                     }
                     Spacer()
+                    
                     Menu {
                         Button(action: onEdit) {
                             Label("Edit Store", systemImage: "pencil")
@@ -91,69 +94,76 @@ struct StoreCard: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
-                            .font(.system(size: 14))
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.secondary)
-                            .padding(8)
+                            .padding(.leading, 8)
+                            .padding(.bottom, 8)
                             .contentShape(Rectangle())
                     }
                 }
                 
-                Divider()
-                
-                HStack(spacing: 10) {
+                // Manager & Status
+                HStack(spacing: 8) {
                     Circle()
                         .fill(Color(uiColor: .systemGray5))
-                        .frame(width: 28, height: 28)
+                        .frame(width: 24, height: 24)
                         .overlay(
                             Text(store.managerInitials)
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.primary)
                         )
                     
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 0) {
                         Text("MANAGER")
-                            .font(.system(size: 7, weight: .bold))
+                            .font(.system(size: 8, weight: .bold))
                             .foregroundColor(.secondary)
                         Text(store.managerName)
                             .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.primary)
                     }
                     
                     Spacer()
                     
-                    // Moved Status Label to the bottom
-                    Text(store.status.rawValue)
-                        .font(.system(size: 8, weight: .bold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(statusColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(4)
+                    statusBadge(for: store.status)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 12)
-            .padding(.top, 4)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .top)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 3)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
         .opacity(store.isArchived ? 0.6 : 1.0)
         .grayscale(store.isArchived ? 1.0 : 0.0)
     }
     
-    private var statusColor: Color {
-        switch store.status {
-        case .active: return Color.teal
-        case .maintenance: return Color.purple
-        case .inventory: return Color.orange
-        }
+    @ViewBuilder
+    private func statusBadge(for status: StoreStatus) -> some View {
+        let isMaintenance = status == .maintenance
+        let isInventory = status == .inventory
+        
+        let fgColor = isMaintenance ? Color.purple : (isInventory ? Color.orange : Color.teal)
+        let bgColor = fgColor.opacity(0.15)
+        
+        Text(status.rawValue.uppercased())
+            .font(.system(size: 9, weight: .heavy))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(bgColor)
+            .foregroundColor(fgColor)
+            .clipShape(Capsule())
     }
     
     private var fallbackImage: some View {
         Rectangle()
-            .fill(LinearGradient(colors: [Color(white: 0.9), Color(white: 0.95)], startPoint: .top, endPoint: .bottom))
+            .fill(Color(uiColor: .systemGray5))
             .frame(maxWidth: .infinity)
-            .frame(height: 120)
+            .frame(height: 160)
+            .overlay(
+                Image(systemName: "photo.fill")
+                    .font(.largeTitle)
+                    .foregroundColor(.secondary)
+            )
     }
 }

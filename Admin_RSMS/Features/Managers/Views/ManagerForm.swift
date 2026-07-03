@@ -9,7 +9,6 @@ struct ManagerForm: View {
     
     @State private var fullName: String
     @State private var emailAddress: String
-    @State private var selectedRole: String
     @State private var selectedStore: String
     
     init(memberToEdit: Manager? = nil, onDismiss: @escaping () -> Void, onSave: @escaping (Manager) -> Void) {
@@ -19,226 +18,188 @@ struct ManagerForm: View {
         
         _fullName = State(initialValue: memberToEdit?.name ?? "")
         _emailAddress = State(initialValue: memberToEdit?.email ?? "")
-        _selectedRole = State(initialValue: memberToEdit?.role ?? "Manager")
         _selectedStore = State(initialValue: memberToEdit?.location ?? "")
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            headerView
+            // ── Top Bar ──
+            topBar
             
+            // ── Scrollable Content ──
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Back Button
-                    Button(action: onDismiss) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                            Text("Back to Manager List")
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.blue)
-                    }
-                    .padding(.top, 24)
+                VStack(spacing: 24) {
                     
-                    // Main Card
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Card Header
-                        VStack(alignment: .leading, spacing: 8) {
+                    // Main Section Card
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Section header
+                        HStack(spacing: 10) {
+                            Image(systemName: "person.crop.rectangle")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.1, green: 0.2, blue: 0.4))
+                                .frame(width: 32, height: 32)
+                                .background(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            
                             Text("Member Information")
-                                .font(.system(size: 20, weight: .bold))
-                            Text("Configure identity and access levels for the new user account.")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 17, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
                         }
-                        .padding(24)
                         
-                        Divider()
-                        
-                        // Card Content
-                        VStack(alignment: .leading, spacing: 24) {
+                        // Content
+                        VStack(spacing: 20) {
                             // Name and Email row
-                            HStack(spacing: 24) {
-                                inputField(label: "Full Name", placeholder: "e.g. Julian Drake", text: $fullName)
-                                inputField(label: "Email Address", placeholder: "julian@rsms-retail.com", text: $emailAddress)
+                            HStack(alignment: .top, spacing: 16) {
+                                inputField(label: "Full Name", placeholder: "e.g. Julian Drake", icon: "person.text.rectangle", text: $fullName)
+                                inputField(label: "Email Address", placeholder: "julian@rsms-retail.com", icon: "envelope", text: $emailAddress)
                                     .autocapitalization(.none)
                                     .keyboardType(.emailAddress)
                             }
                             
-                            // Role and Store row
-                            HStack(spacing: 24) {
-                                inputField(label: "Role Selection", placeholder: "e.g. Manager", text: $selectedRole)
+                            // Store row
+                            HStack(alignment: .top, spacing: 16) {
                                 storeAssignmentField
                             }
-                            
-                            // Action Buttons
-                            HStack {
-                                Spacer()
-                                Button(action: onDismiss) {
-                                    Text("Cancel")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                }
-                                .padding(.trailing, 24)
-                                
-                                Button(action: {
-                                    if !fullName.isEmpty && !selectedRole.isEmpty {
-                                        let initials = fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
-                                        
-                                        let member = Manager(
-                                            id: memberToEdit?.id ?? UUID(),
-                                            name: fullName,
-                                            email: emailAddress,
-                                            role: selectedRole,
-                                            location: selectedStore.isEmpty ? "Assigned Store" : selectedStore,
-                                            shift: memberToEdit?.shift ?? "New Hire",
-                                            imageName: memberToEdit?.imageName,
-                                            initials: initials.isEmpty ? "?" : initials
-                                        )
-                                        onSave(member)
-                                    }
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: memberToEdit == nil ? "person.badge.plus" : "pencil.circle")
-                                        Text(memberToEdit == nil ? "Add Member" : "Save Changes")
-                                    }
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 12)
-                                    .background(fullName.isEmpty || selectedRole.isEmpty ? Color.gray : Color(red: 0.1, green: 0.2, blue: 0.4))
-                                    .cornerRadius(10)
-                                }
-                                .disabled(fullName.isEmpty || selectedRole.isEmpty)
-                            }
-                            .padding(.top, 8)
                         }
-                        .padding(24)
                     }
-                    .background(Color.white)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                    )
+                    .padding(24)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     
                     // Onboarding Invitation Note
                     onboardingNote
                 }
-                .padding(.horizontal, 32)
-                .padding(.bottom, 40)
+                .padding(28)
             }
             .background(Color(uiColor: .systemGroupedBackground))
             
-            // Status Bar (matching previous screens)
-            statusBar
+            // ── Bottom Action Bar ──
+            bottomBar
         }
         .navigationBarHidden(true)
     }
     
-    private var headerView: some View {
-        HStack(spacing: 24) {
-            Text("Global Manager")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-            
-            // Search Bar
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                Text("Search resources...")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 14))
-                Spacer()
+    private var topBar: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Button(action: { onDismiss() }) {
+                Text("Close")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(uiColor: .systemBackground))
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .cornerRadius(10)
-            .frame(maxWidth: 350)
             
-            Spacer()
-            
-            // Icons
-            HStack(spacing: 12) {
-                Button(action: {}) {
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: "bell")
-                            .font(.system(size: 16))
-                            .foregroundColor(.primary)
-                            .padding(8)
-                            .background(Circle().fill(Color(uiColor: .secondarySystemGroupedBackground)))
-                        
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 8, height: 8)
-                            .offset(x: -2, y: 2)
-                    }
-                }
-                
-                Button(action: {}) {
-                    Image(systemName: "square.grid.3x3.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.primary)
-                        .padding(8)
-                        .background(Circle().fill(Color(uiColor: .secondarySystemGroupedBackground)))
-                }
-                
-                Button(action: {}) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .foregroundColor(.secondary)
-                }
-            }
+            Text(memberToEdit == nil ? "Manager" : "Edit Manager")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
         }
-        .padding(.horizontal, 32)
-        .padding(.top, 24)
-        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+        .padding(.bottom, 4)
         .background(Color(uiColor: .systemGroupedBackground))
     }
     
-    private func inputField(label: String, placeholder: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.primary)
+    private var bottomBar: some View {
+        HStack(spacing: 16) {
+            Spacer()
             
-            TextField(placeholder, text: text)
-                .padding()
-                .background(Color(uiColor: .systemGray6).opacity(0.5))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                )
+            Button(action: {
+                if !fullName.isEmpty {
+                    let initials = fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+                    
+                    let member = Manager(
+                        id: memberToEdit?.id ?? UUID(),
+                        name: fullName,
+                        email: emailAddress,
+                        role: "Manager",  // Hardcoded to Manager as required
+                        location: selectedStore.isEmpty ? "Assigned Store" : selectedStore,
+                        shift: memberToEdit?.shift ?? "New Hire",
+                        imageName: memberToEdit?.imageName,
+                        initials: initials.isEmpty ? "?" : initials
+                    )
+                    onSave(member)
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: memberToEdit == nil ? "person.badge.plus" : "checkmark.circle.fill")
+                        .font(.system(size: 15))
+                    Text(memberToEdit == nil ? "Create" : "Update")
+                        .font(.system(size: 15, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 12)
+                .background(Color(red: 0.1, green: 0.2, blue: 0.4))
+                .clipShape(Capsule())
+            }
+            .disabled(fullName.isEmpty)
+            .opacity(fullName.isEmpty ? 0.5 : 1.0)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial)
+        .overlay(
+            Rectangle()
+                .fill(Color.gray.opacity(0.12))
+                .frame(height: 1),
+            alignment: .top
+        )
+    }
+    
+    private var roleSelectionField: some View {
+        EmptyView()
+    }
+    
+    private func inputField(label: String, placeholder: String, icon: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                
+                TextField(placeholder, text: text)
+                    .font(.system(size: 15))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background(Color(uiColor: .systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .frame(maxWidth: .infinity)
     }
     
     private var storeAssignmentField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Store Assignment")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.primary)
+            Text("STORE ASSIGNMENT")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
             
             let activeStores = dataManager.stores.filter { !$0.isArchived }
             
             if activeStores.isEmpty {
-                HStack {
+                HStack(spacing: 8) {
                     Image(systemName: "storefront")
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
-                    Text("No stores created yet")
+                    Text("No stores available")
                         .foregroundColor(.secondary)
-                        .font(.system(size: 14))
+                        .font(.system(size: 15))
                     Spacer()
                 }
-                .padding()
-                .background(Color(uiColor: .systemGray6).opacity(0.5))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                )
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
+                .background(Color(uiColor: .systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 Menu {
                     Button(action: { selectedStore = "" }) {
@@ -255,10 +216,11 @@ struct ManagerForm: View {
                         }
                     }
                 } label: {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "storefront")
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                            .font(.system(size: 14))
+                        
                         if selectedStore.isEmpty {
                             Text("Select a store...")
                                 .foregroundColor(.secondary)
@@ -267,17 +229,15 @@ struct ManagerForm: View {
                                 .foregroundColor(.primary)
                         }
                         Spacer()
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 12))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
-                    .padding()
-                    .background(Color(uiColor: .systemGray6).opacity(0.5))
-                    .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                    )
+                    .font(.system(size: 15))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 13)
+                    .background(Color(uiColor: .systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
         }
@@ -304,32 +264,6 @@ struct ManagerForm: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.blue.opacity(0.05))
         .cornerRadius(12)
-    }
-    
-    private var statusBar: some View {
-        HStack(spacing: 24) {
-            HStack(spacing: 8) {
-                Circle().fill(Color.green).frame(width: 6, height: 6)
-                Text("10 STORES ONLINE")
-                    .font(.system(size: 9, weight: .bold))
-            }
-            
-            HStack(spacing: 8) {
-                Circle().fill(Color.orange).frame(width: 6, height: 6)
-                Text("2 IN MAINTENANCE")
-                    .font(.system(size: 9, weight: .bold))
-            }
-            
-            Spacer()
-            
-            Text("SYNC STATUS: REAL-TIME • TODAY 09:42 AM")
-                .font(.system(size: 9))
-                .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, 32)
-        .padding(.vertical, 12)
-        .background(Color.white)
-        .overlay(Divider(), alignment: .top)
     }
 }
 

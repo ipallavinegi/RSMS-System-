@@ -7,26 +7,12 @@ struct ManagersView: View {
     @State private var searchText = ""
     @State private var showingAddMember = false
     @State private var memberToEdit: Manager? = nil
-    @State private var selectedFilter = "All Manager"
-    
-    let filters = ["All Manager", "Admins", "Managers"]
+    private let cardWidth: CGFloat = 300
     
     var filteredMembers: [Manager] {
         let members = dataManager.managers
-        if selectedFilter == "All Manager" {
-            return members.filter { member in
-                searchText.isEmpty || member.name.localizedCaseInsensitiveContains(searchText) || member.role.localizedCaseInsensitiveContains(searchText)
-            }
-        } else {
-            return members.filter { member in
-                let matchesFilter = member.role.localizedCaseInsensitiveContains(selectedFilter.trimmingCharacters(in: .init(charactersIn: "s"))) || 
-                                    (selectedFilter == "Admins" && member.role.localizedCaseInsensitiveContains("Administrator")) ||
-                                    (selectedFilter == "Managers" && member.role.localizedCaseInsensitiveContains("Manager"))
-                
-                let matchesSearch = searchText.isEmpty || member.name.localizedCaseInsensitiveContains(searchText) || member.role.localizedCaseInsensitiveContains(searchText)
-                
-                return matchesFilter && matchesSearch
-            }
+        return members.filter { member in
+            searchText.isEmpty || member.name.localizedCaseInsensitiveContains(searchText) || member.role.localizedCaseInsensitiveContains(searchText)
         }
     }
     
@@ -41,23 +27,14 @@ struct ManagersView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(uiColor: .systemGroupedBackground))
-        } else if memberToEdit != nil {
-            ManagerForm(memberToEdit: memberToEdit, onDismiss: { 
-                memberToEdit = nil
-            }, onSave: { member in
-                dataManager.updateManager(member)
-                memberToEdit = nil
-            })
         } else {
             VStack(spacing: 0) {
                 // Header (same as before)
                 headerView
                 
-                
-                
                 // Grid
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 20)], spacing: 20) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
                         ForEach(filteredMembers) { member in
                             ManagerCard(member: member, onEdit: {
                                 memberToEdit = member
@@ -68,12 +45,13 @@ struct ManagersView: View {
                                 restored.isArchived = false
                                 dataManager.updateManager(restored)
                             })
-                            
+                            .frame(width: cardWidth)
                         }
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, sizeClass == .compact ? 16 : 32)
                     .padding(.top, 32)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 140)
                 }
                 .background(Color(uiColor: .systemGroupedBackground))
             }
@@ -89,21 +67,20 @@ struct ManagersView: View {
                 Task { await dataManager.fetchManager() }
             }
             .sheet(isPresented: $showingAddMember) {
-                NavigationView {
-                    ManagerForm(memberToEdit: nil, onDismiss: {
-                        showingAddMember = false
-                    }, onSave: { member in
-                        dataManager.addManager(member)
-                        showingAddMember = false
-                    })
-                    .navigationTitle("Add Manager")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { showingAddMember = false }
-                        }
-                    }
-                }
+                ManagerForm(memberToEdit: nil, onDismiss: {
+                    showingAddMember = false
+                }, onSave: { member in
+                    dataManager.addManager(member)
+                    showingAddMember = false
+                })
+            }
+            .sheet(item: $memberToEdit) { member in
+                ManagerForm(memberToEdit: member, onDismiss: {
+                    memberToEdit = nil
+                }, onSave: { updatedMember in
+                    dataManager.updateManager(updatedMember)
+                    memberToEdit = nil
+                })
             }
             .navigationTitle("Managers")
             .navigationBarTitleDisplayMode(.inline)
@@ -123,7 +100,6 @@ struct ManagersView: View {
     
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 16) {
-            
             HStack(spacing: 12) {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
