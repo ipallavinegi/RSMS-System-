@@ -178,9 +178,7 @@ struct AddPromotionView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-
+        NavigationStack {
             ScrollView {
                 if useWideLayout {
                     wideLayout
@@ -189,10 +187,24 @@ struct AddPromotionView: View {
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground))
-
-            bottomBar
+            .navigationTitle(editingPromotion == nil ? "New Promotion" : "Edit Promotion")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        onDismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: save) {
+                        Text(editingPromotion == nil ? "Save" : "Update")
+                            .fontWeight(.bold)
+                    }
+                    .disabled(isSaving)
+                }
+            }
         }
-        .navigationBarHidden(true)
         .onAppear {
             Task { await service.fetchPickerData() }
         }
@@ -217,65 +229,7 @@ struct AddPromotionView: View {
         }
     }
 
-    // MARK: - Top Bar
-
-    private var topBar: some View {
-        HStack {
-            Button(action: { onDismiss() }) {
-                Text("Cancel")
-                    .font(.system(size: 16))
-                    .foregroundColor(.accentColor)
-            }
-
-            Spacer()
-
-            Text(editingPromotion == nil ? "New Promotion" : "Edit Promotion")
-                .font(.system(size: 17, weight: .bold))
-                .foregroundColor(.primary)
-
-            Spacer()
-
-            // Balances the "Cancel" button so the title stays centered
-            Text("Cancel")
-                .font(.system(size: 16))
-                .foregroundColor(.clear)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(Color(uiColor: .systemBackground))
-        .overlay(Rectangle().fill(Color.gray.opacity(0.12)).frame(height: 1), alignment: .bottom)
-    }
-
-    private var bottomBar: some View {
-        HStack {
-            Spacer()
-            Button(action: { save() }) {
-                HStack(spacing: 8) {
-                    if isSaving {
-                        ProgressView().tint(.white)
-                    } else {
-                        Image(systemName: editingPromotion == nil ? "plus.circle.fill" : "checkmark.circle.fill")
-                            .font(.system(size: 15))
-                    }
-                    Text(isSaving ? "Saving…" : (editingPromotion == nil ? "Save" : "Update"))
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 14)
-                .background(
-                    Capsule()
-                        .fill(PromoFormTheme.navy)
-                )
-            }
-            .disabled(isSaving)
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .background(.ultraThinMaterial)
-        .overlay(Rectangle().fill(Color.gray.opacity(0.12)).frame(height: 1), alignment: .top)
-    }
-
+    // Native Toolbars replaced topBar and bottomBar
     // MARK: - Layouts
 
     private var wideLayout: some View {

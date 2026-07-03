@@ -263,11 +263,7 @@ struct AddStoreView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Top Navigation Bar ──
-            topBar
-            
-            // ── Scrollable Content ──
+        NavigationStack {
             ScrollView {
                 if useWideLayout {
                     wideLayout
@@ -276,11 +272,23 @@ struct AddStoreView: View {
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            
-            // ── Bottom Action Bar ──
-            bottomBar
+            .navigationTitle(editingStore == nil ? "Add Store" : "Edit Store")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        onDismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: saveStore) {
+                        Text(editingStore == nil ? "Create" : "Update")
+                            .fontWeight(.bold)
+                    }
+                }
+            }
         }
-        .navigationBarHidden(true)
         .onAppear {
             locationManager.requestPermission()
             locationManager.startUpdating()
@@ -311,60 +319,7 @@ struct AddStoreView: View {
         }
     }
     
-    // MARK: - Top Bar
-    
-    private var topBar: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Button(action: { onDismiss() }) {
-                Text("Close")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(uiColor: .systemBackground))
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
-            }
-            
-            Text(editingStore == nil ? "Add New Store" : "Edit Store")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 4)
-        .background(Color(uiColor: .systemGroupedBackground))
-    }
-    
-    private var bottomBar: some View {
-        HStack(spacing: 16) {
-            Spacer()
-            
-            Button(action: { saveStore() }) {
-                HStack(spacing: 8) {
-                    Image(systemName: editingStore == nil ? "plus.circle.fill" : "checkmark.circle.fill")
-                        .font(.system(size: 15))
-                    Text(editingStore == nil ? "Create" : "Update")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 12)
-                .background(FormTheme.navy)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .background(.ultraThinMaterial)
-        .overlay(
-            Rectangle()
-                .fill(Color.gray.opacity(0.12))
-                .frame(height: 1),
-            alignment: .top
-        )
-    }
+    // Bottom and Top bars removed in favor of Navigation Stack
     
     // MARK: - Wide Layout (iPad / Regular width)
     

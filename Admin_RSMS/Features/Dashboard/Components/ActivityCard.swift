@@ -26,12 +26,12 @@ struct ActivityCard<Content: View, TrailingContent: View>: View {
             // ── Header row ──
             HStack(alignment: .center) {
                 Text(title)
-                    .font(.system(size: 18, weight: .semibold)) // HIG: .headline for card titles
+                    .font(.headline)
                     .foregroundStyle(Color.primary)
                 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.caption2.weight(.bold))
                         .foregroundStyle(Color.secondary)
                         .tracking(0.4)
                 }

@@ -10,7 +10,6 @@ struct ManagerForm: View {
     @State private var fullName: String
     @State private var emailAddress: String
     @State private var selectedStore: String
-    
     @State private var showingValidationAlert = false
     @State private var validationMessage = ""
     
@@ -25,11 +24,7 @@ struct ManagerForm: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Top Bar ──
-            topBar
-            
-            // ── Scrollable Content ──
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     
@@ -75,112 +70,73 @@ struct ManagerForm: View {
                 .padding(28)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            
-            // ── Bottom Action Bar ──
-            bottomBar
-        }
-        .navigationBarHidden(true)
-        .alert(isPresented: $showingValidationAlert) {
-            Alert(
-                title: Text("Missing Information"),
-                message: Text(validationMessage),
-                dismissButton: .default(Text("OK"))
-            )
-        }
-    }
-    
-    private var topBar: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Button(action: { onDismiss() }) {
-                Text("Close")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(uiColor: .systemBackground))
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
+            .navigationTitle(memberToEdit == nil ? "Add Manager" : "Edit Manager")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        onDismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: saveManager) {
+                        Text(memberToEdit == nil ? "Create" : "Update")
+                            .fontWeight(.bold)
+                    }
+                }
             }
-            
-            Text(memberToEdit == nil ? "Manager" : "Edit Manager")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 4)
-        .background(Color(uiColor: .systemGroupedBackground))
-    }
-    
-    private var bottomBar: some View {
-        HStack(spacing: 16) {
-            Spacer()
-            
-            Button(action: {
-                let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-                let trimmedEmail = emailAddress.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                
-                if trimmedName.isEmpty {
-                    validationMessage = "Please enter the manager's full name."
-                    showingValidationAlert = true
-                    return
-                }
-                
-                if trimmedEmail.isEmpty || !trimmedEmail.hasSuffix("@gmail.com") {
-                    validationMessage = "Please enter a valid Gmail address (must end with @gmail.com)."
-                    showingValidationAlert = true
-                    return
-                }
-                
-                if selectedStore.isEmpty {
-                    validationMessage = "Please select a store to assign the manager to."
-                    showingValidationAlert = true
-                    return
-                }
-                
-                let initials = trimmedName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
-                
-                let member = Manager(
-                    id: memberToEdit?.id ?? UUID(),
-                    name: trimmedName,
-                    email: trimmedEmail,
-                    role: "Manager",  // Hardcoded to Manager as required
-                    location: selectedStore,
-                    shift: memberToEdit?.shift ?? "New Hire",
-                    imageName: memberToEdit?.imageName,
-                    initials: initials.isEmpty ? "?" : initials
+            .alert(isPresented: $showingValidationAlert) {
+                Alert(
+                    title: Text("Missing Information"),
+                    message: Text(validationMessage),
+                    dismissButton: .default(Text("OK"))
                 )
-                onSave(member)
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: memberToEdit == nil ? "person.badge.plus" : "checkmark.circle.fill")
-                        .font(.system(size: 15))
-                    Text(memberToEdit == nil ? "Create" : "Update")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 12)
-                .background(Color(red: 0.1, green: 0.2, blue: 0.4))
-                .clipShape(Capsule())
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .background(.ultraThinMaterial)
-        .overlay(
-            Rectangle()
-                .fill(Color.gray.opacity(0.12))
-                .frame(height: 1),
-            alignment: .top
-        )
     }
     
+    private func saveManager() {
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedEmail = emailAddress.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        if trimmedName.isEmpty {
+            validationMessage = "Please enter the manager's full name."
+            showingValidationAlert = true
+            return
+        }
+        
+        if trimmedEmail.isEmpty || !trimmedEmail.hasSuffix("@gmail.com") {
+            validationMessage = "Please enter a valid Gmail address (must end with @gmail.com)."
+            showingValidationAlert = true
+            return
+        }
+        
+        if selectedStore.isEmpty {
+            validationMessage = "Please select a store to assign the manager to."
+            showingValidationAlert = true
+            return
+        }
+        
+        let initials = trimmedName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+        
+        let member = Manager(
+            id: memberToEdit?.id ?? UUID(),
+            name: trimmedName,
+            email: trimmedEmail,
+            role: "Manager",  // Hardcoded to Manager as required
+            location: selectedStore,
+            shift: memberToEdit?.shift ?? "New Hire",
+            imageName: memberToEdit?.imageName,
+            initials: initials.isEmpty ? "?" : initials
+        )
+        onSave(member)
+    }
+        
     private var roleSelectionField: some View {
         EmptyView()
     }
-    
+        
     private func inputField(label: String, placeholder: String, icon: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label.uppercased())
@@ -203,7 +159,7 @@ struct ManagerForm: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
+        
     private var storeAssignmentField: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("STORE ASSIGNMENT")
@@ -270,8 +226,8 @@ struct ManagerForm: View {
         }
         .frame(maxWidth: .infinity)
     }
-
-    
+        
+        
     private var onboardingNote: some View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: "info.circle.fill")

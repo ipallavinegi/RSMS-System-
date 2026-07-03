@@ -15,23 +15,24 @@ struct ProductDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+        Form {
+            Section {
                 imageCarousel
-
-                HStack(spacing: 12) {
+                    .listRowInsets(EdgeInsets()) // Makes the image fit flush to the edges of the cell
+                
+                HStack(spacing: 16) {
                     Circle()
                         .fill(Color.identity(for: product.brand).gradient)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 48, height: 48)
                         .overlay(
                             Text(initial)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.title3.weight(.bold))
                                 .foregroundStyle(.white)
                         )
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(product.productName)
-                            .font(.title2.weight(.semibold))
+                            .font(.headline)
                         Text(product.brand)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -41,39 +42,44 @@ struct ProductDetailView: View {
 
                     StatusBadge(status: status)
                 }
+                .padding(.vertical, 8)
+            }
+            
+            Section(header: Text("Product Details")) {
+                ListRow(label: "SKU", value: product.sku)
+                ListRow(label: "Brand", value: product.brand)
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    detailField("SKU", product.sku)
-                    detailField("Brand", product.brand)
-
-                    if let onUpdatePrice {
-                        EditablePriceField(price: product.price, onSave: onUpdatePrice)
-                    } else {
-                        detailField("Price", product.price.asCurrency)
-                    }
-
-                    detailField("Material", product.material)
-                    detailField("Color", product.color)
-                    detailField("Collection", product.collectionName)
-                    detailField("Barcode", product.barcode)
-                    detailField("Certificate", product.certificateNumber)
+                if let onUpdatePrice {
+                    EditablePriceField(price: product.price, onSave: onUpdatePrice)
+                } else {
+                    ListRow(label: "Price", value: product.price.asCurrency)
                 }
 
-                if let description = product.description, !description.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Description")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(description)
-                            .font(.body)
-                    }
+                if let material = product.material, !material.isEmpty {
+                    ListRow(label: "Material", value: material)
+                }
+                if let color = product.color, !color.isEmpty {
+                    ListRow(label: "Color", value: color)
+                }
+                if let collection = product.collectionName, !collection.isEmpty {
+                    ListRow(label: "Collection", value: collection)
+                }
+                if let barcode = product.barcode, !barcode.isEmpty {
+                    ListRow(label: "Barcode", value: barcode)
+                }
+                if let cert = product.certificateNumber, !cert.isEmpty {
+                    ListRow(label: "Certificate", value: cert)
                 }
             }
-            .padding(LayoutConstants.cardPadding)
-            .frame(maxWidth: LayoutConstants.readableContentWidth)
-            .frame(maxWidth: .infinity)
+
+            if let description = product.description, !description.isEmpty {
+                Section(header: Text("Description")) {
+                    Text(description)
+                        .font(.body)
+                        .padding(.vertical, 4)
+                }
+            }
         }
-        .background(Color.rsmsBackground)
         .navigationTitle(product.productName)
         // Approve/Reject intentionally live only on the card in the grid.
         // The detail sheet's toolbar is just "Close" (added by the presenting view).
@@ -86,8 +92,7 @@ struct ProductDetailView: View {
     private var imageCarousel: some View {
         if images.isEmpty {
             FitImageView(url: nil, backdropColor: .rsmsSurface)
-                .frame(height: 280)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(height: 320)
         } else {
             TabView {
                 ForEach(images) { productImage in
@@ -95,19 +100,23 @@ struct ProductDetailView: View {
                 }
             }
             .tabViewStyle(.page)
-            .frame(height: 280)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .frame(height: 320)
         }
     }
+}
 
-    @ViewBuilder
-    private func detailField(_ label: String, _ value: String?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+private struct ListRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
             Text(label)
-                .font(.caption)
+                .foregroundStyle(.primary)
+            Spacer(minLength: 16)
+            Text(value)
                 .foregroundStyle(.secondary)
-            Text(value?.isEmpty == false ? value! : "—")
-                .font(.body)
+                .multilineTextAlignment(.trailing)
         }
     }
 }
@@ -119,7 +128,7 @@ private struct StatusBadge: View {
         Label(status.rawValue, systemImage: status.icon)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.vertical, 6)
             .background(status.tint.opacity(0.15), in: Capsule())
             .foregroundStyle(status.tint)
     }
@@ -135,10 +144,11 @@ private struct EditablePriceField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        HStack {
             Text("Price")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
+            
+            Spacer(minLength: 16)
 
             if isEditing {
                 HStack(spacing: 8) {
@@ -147,10 +157,12 @@ private struct EditablePriceField: View {
                         .textFieldStyle(.roundedBorder)
                         .focused($isFocused)
                         .frame(maxWidth: 130)
+                        .multilineTextAlignment(.trailing)
                         .onSubmit(commit)
 
                     Button(action: commit) {
                         Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 20))
                             .foregroundStyle(.green)
                     }
                     .buttonStyle(.plain)
@@ -159,14 +171,15 @@ private struct EditablePriceField: View {
                         isEditing = false
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 20))
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
             } else {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Text(price.asCurrency)
-                        .font(.body)
+                        .foregroundStyle(.secondary)
 
                     Button {
                         draftText = String(format: "%.0f", price)
@@ -174,7 +187,7 @@ private struct EditablePriceField: View {
                         isFocused = true
                     } label: {
                         Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 16))
+                            .font(.system(size: 20))
                             .foregroundColor(.blue)
                     }
                     .buttonStyle(.plain)

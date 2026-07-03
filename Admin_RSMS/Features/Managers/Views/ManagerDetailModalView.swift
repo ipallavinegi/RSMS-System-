@@ -84,7 +84,6 @@ struct ManagerDetailModalView: View {
     private var overviewSection: some View {
         FormSectionCard(title: "Overview", icon: "person.crop.rectangle") {
             VStack(alignment: .leading, spacing: 16) {
-
                 detailRow(label: "Store Assigned", value: manager.location, icon: "building.2.fill")
                 detailRow(label: "Email Address", value: manager.email, icon: "envelope.fill")
             }

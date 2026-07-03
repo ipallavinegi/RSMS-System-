@@ -28,7 +28,7 @@ struct StoresView: View {
     @State private var searchText = ""
     @State private var showingAddStore = false
     @State private var storeToEdit: AdminStore? = nil
-    @State private var storeToView: AdminStore? = nil
+    @State private var selectedStoreForDetails: AdminStore? = nil
     @State private var activeSort: StoreSortOption = .nameAscending
     
     // UI Constants
@@ -106,21 +106,19 @@ struct StoresView: View {
                         ScrollView {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
                                 ForEach(filteredStores) { store in
-                                    Button(action: {
-                                        storeToView = store
-                                    }) {
-                                        StoreCard(store: store, onEdit: {
-                                            storeToEdit = store
-                                        }, onDelete: {
-                                            dataManager.removeStore(store)
-                                        }, onRestore: {
-                                            var restored = store
-                                            restored.isArchived = false
-                                            dataManager.updateStore(restored)
-                                        })
-                                        .frame(width: cardWidth)
+                                    StoreCard(store: store, onEdit: {
+                                        storeToEdit = store
+                                    }, onDelete: {
+                                        dataManager.removeStore(store)
+                                    }, onRestore: {
+                                        var restored = store
+                                        restored.isArchived = false
+                                        dataManager.updateStore(restored)
+                                    })
+                                    .frame(width: cardWidth)
+                                    .onTapGesture {
+                                        selectedStoreForDetails = store
                                     }
-                                    .buttonStyle(.plain)
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -174,11 +172,10 @@ struct StoresView: View {
                     }
                 )
             }
-            .sheet(item: $storeToView) { store in
-                StoreDetailModalView(
-                    store: store,
-                    onDismiss: { storeToView = nil }
-                )
+            .sheet(item: $selectedStoreForDetails) { store in
+                StoreDetailModalView(store: store, onDismiss: {
+                    selectedStoreForDetails = nil
+                })
             }
             .navigationTitle("Stores")
             .navigationBarTitleDisplayMode(.inline)
@@ -383,7 +380,7 @@ struct StoresView: View {
                                     Text(store.managerName)
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(.primary)
-                                }
+                                 }
                             ))
                             
                             // Coordinates Card
@@ -683,7 +680,6 @@ struct StoresView: View {
         }
     }
 }
-
 
 #Preview {
     StoresView()

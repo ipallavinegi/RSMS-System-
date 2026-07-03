@@ -5,17 +5,7 @@ struct DashboardView: View {
     
     @Environment(\.horizontalSizeClass) private var sizeClass
     
-    private var bottomGridColumns: [GridItem] {
-        if sizeClass == .compact {
-            return [GridItem(.flexible(), spacing: 24, alignment: .top)]
-        } else {
-            return [
-                GridItem(.flexible(), spacing: 24, alignment: .top),
-                GridItem(.flexible(), spacing: 24, alignment: .top),
-                GridItem(.flexible(), spacing: 24, alignment: .top)
-            ]
-        }
-    }
+    
     
     var body: some View {
         ScrollView {
@@ -25,7 +15,8 @@ struct DashboardView: View {
                     HStack(alignment: .top, spacing: 24) {
                         // Left: Revenue Chart Card
                         RevenueChartCard(salesSummary: viewModel.salesSummary, selectedPeriod: $viewModel.selectedRevenuePeriod)
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        
                         
                         // Right: 2x2 Grid for Statistic Cards
                         DashboardGrid(spacing: 16) {
@@ -85,8 +76,9 @@ struct DashboardView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        .frame(maxWidth: .infinity) 
+                        .frame(maxWidth: .infinity, maxHeight: .infinity) 
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     
                     // Fallback to vertical stack on narrower screens
                     VStack(spacing: 24) {
@@ -153,137 +145,18 @@ struct DashboardView: View {
                 }
                 
                 // Bottom Section
-                LazyVGrid(columns: bottomGridColumns, spacing: 24) {
-                    ActivityCard(
-                        title: "Retail Health Score", 
-                        subtitle: "NETWORK AVG"
-                    ) {
-                        VStack(spacing: 16) {
-                            ForEach(viewModel.retailHealthScores) { health in
-                                HStack(spacing: 12) {
-                                    // Circular Score Indicator
-                                    ZStack {
-                                        Circle()
-                                            .stroke(health.color.opacity(0.2), lineWidth: 4)
-                                        Circle()
-                                            .trim(from: 0, to: CGFloat(health.score) / 100)
-                                            .stroke(health.color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                                            .rotationEffect(.degrees(-90))
-                                        
-                                        Text("\(health.score)%")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundColor(.primary)
-                                    }
-                                    .frame(width: 40, height: 40)
-                                    
-                                    Text(health.storeName)
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.85)
-                                    
-                                    Spacer()
-                                    
-                                    Text(health.statusText)
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(health.color)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.85)
-                                }
-                                
-                                if health.id != viewModel.retailHealthScores.last?.id {
-                                    Divider()
-                                }
-                            }
+                Group {
+                    if sizeClass == .compact {
+                        VStack(spacing: 24) {
+                            bottomCardsView
                         }
+                    } else {
+                        HStack(spacing: 24) {
+                            bottomCardsView
+                        }
+                        // Intrinsic vertical layout on HStack stretches all cards to the tallest one
+                        .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(maxWidth: .infinity)
-                    
-                    // 2. Store Performance
-                    ActivityCard(
-                        title: "Store Performance",
-                        subtitle: nil,
-                        trailingContent: {
-                            Picker("Filter", selection: $viewModel.selectedStorePerformanceFilter) {
-                                ForEach(StorePerformanceFilter.allCases) { filter in
-                                    Text(filter.rawValue).tag(filter)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                        }
-                    ) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            
-                            ForEach(viewModel.storePerformanceList) { store in
-                                HStack(spacing: 12) {
-                                    // Rank Circle
-                                    Circle()
-                                        .fill(Color(uiColor: .systemGray6))
-                                        .frame(width: 32, height: 32)
-                                        .overlay(
-                                            Text("\(store.rank)")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .foregroundColor(.primary)
-                                        )
-                                    
-                                    Text(store.storeName)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundColor(.primary)
-                                    
-                                    Spacer()
-                                    
-                                    Text(store.revenueText)
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.primary)
-                                }
-                                
-                                if store.id != viewModel.storePerformanceList.last?.id {
-                                    Divider()
-                                }
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    
-                    // 3. Top Customers
-                    ActivityCard(
-                        title: "Top Customers",
-                        subtitle: "BY SPEND"
-                    ) {
-                        VStack(spacing: 16) {
-                            ForEach(viewModel.topCustomersList) { customer in
-                                HStack(spacing: 12) {
-                                    // Initials Avatar
-                                    let initials = customer.customerName.components(separatedBy: " ").compactMap { $0.first }.prefix(2).map(String.init).joined()
-                                    
-                                    Circle()
-                                        .fill(Color.purple.opacity(0.5)) // fallback color, realistically would hash the name
-                                        .frame(width: 36, height: 36)
-                                        .overlay(
-                                            Text(initials)
-                                                .font(.system(size: 13, weight: .bold))
-                                                .foregroundColor(.white)
-                                        )
-                                    
-                                    Text(customer.customerName)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundColor(.primary)
-                                    
-                                    Spacer()
-                                    
-                                    Text(customer.spendText)
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.primary)
-                                }
-                                
-                                if customer.id != viewModel.topCustomersList.last?.id {
-                                    Divider()
-                                }
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    
                 }
                 
                 // Bottom padding
@@ -296,6 +169,148 @@ struct DashboardView: View {
         .statusBarHidden()
         .task {
             await viewModel.load()
+        }
+    }
+    
+    @ViewBuilder
+    private var bottomCardsView: some View {
+        // 1. Retail Health Score
+        ActivityCard(
+            title: "Retail Health Score", 
+            subtitle: "NETWORK AVG"
+        ) {
+            VStack(spacing: 0) {
+                ForEach(viewModel.retailHealthScores) { health in
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .stroke(health.color.opacity(0.15), lineWidth: 3.5)
+                            Circle()
+                                .trim(from: 0, to: CGFloat(health.score) / 100)
+                                .stroke(health.color, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                                .rotationEffect(.degrees(-90))
+                            
+                            Text("\(health.score)")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                        }
+                        .frame(width: 44, height: 44)
+                        
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(health.storeName)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            
+                            Text(health.statusText)
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer()
+                        
+                        Circle()
+                            .fill(health.color)
+                            .frame(width: 8, height: 8)
+                    }
+                    .frame(height: 56)
+                    
+                    if health.id != viewModel.retailHealthScores.last?.id {
+                        Divider().padding(.leading, 58)
+                    }
+                }
+            }
+        }
+        
+        // 2. Store Performance
+        ActivityCard(
+            title: "Store Performance",
+            subtitle: "BY REVENUE",
+            trailingContent: {
+                Picker("Filter", selection: $viewModel.selectedStorePerformanceFilter) {
+                    ForEach(StorePerformanceFilter.allCases) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+        ) {
+            VStack(spacing: 0) {
+                ForEach(viewModel.storePerformanceList) { store in
+                    HStack(spacing: 12) {
+                        Text("\(store.rank)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(store.rank <= 3 && viewModel.selectedStorePerformanceFilter == .highest ? .primary : .secondary)
+                            .frame(width: 16, alignment: .center)
+                        
+                        Circle()
+                            .fill(Color.blue.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                            .overlay(
+                                Text(store.initials)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundColor(.blue)
+                            )
+                        
+                        Text(store.storeName)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Text(store.revenueText)
+                            .font(.subheadline.weight(.medium).monospacedDigit())
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 56)
+                    
+                    if store.id != viewModel.storePerformanceList.last?.id {
+                        Divider().padding(.leading, 76)
+                    }
+                }
+            }
+        }
+        
+        // 3. Top Customers
+        ActivityCard(
+            title: "Top Customers",
+            subtitle: "BY SPEND"
+        ) {
+            VStack(spacing: 0) {
+                ForEach(viewModel.topCustomersList.indices, id: \.self) { index in
+                    HStack(spacing: 12) {
+                        Text("\(index + 1)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(index < 3 ? .primary : .secondary)
+                            .frame(width: 16, alignment: .center)
+                        
+                        Circle()
+                            .fill(Color.purple.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                            .overlay(
+                                Text(viewModel.topCustomersList[index].initials)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundColor(.purple)
+                            )
+                        
+                        Text(viewModel.topCustomersList[index].customerName)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Text(viewModel.topCustomersList[index].spendText)
+                            .font(.subheadline.weight(.medium).monospacedDigit())
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 56)
+                    
+                    if index != viewModel.topCustomersList.count - 1 {
+                        Divider().padding(.leading, 76)
+                    }
+                }
+            }
         }
     }
 }
