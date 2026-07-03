@@ -7,6 +7,7 @@ struct ManagersView: View {
     @State private var searchText = ""
     @State private var showingAddMember = false
     @State private var memberToEdit: Manager? = nil
+    @State private var selectedManagerForDetails: Manager? = nil
     private let cardWidth: CGFloat = 300
     
     var filteredMembers: [Manager] {
@@ -46,6 +47,9 @@ struct ManagersView: View {
                                 dataManager.updateManager(restored)
                             })
                             .frame(width: cardWidth)
+                            .onTapGesture {
+                                selectedManagerForDetails = member
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -80,6 +84,11 @@ struct ManagersView: View {
                 }, onSave: { updatedMember in
                     dataManager.updateManager(updatedMember)
                     memberToEdit = nil
+                })
+            }
+            .sheet(item: $selectedManagerForDetails) { member in
+                ManagerDetailModalView(manager: member, onDismiss: {
+                    selectedManagerForDetails = nil
                 })
             }
             .navigationTitle("Managers")

@@ -19,18 +19,18 @@ struct RevenueChartCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("TOTAL REVENUE")
-                        .font(.caption.bold())
+                        .font(.caption2.weight(.bold))
                         .foregroundStyle(.secondary)
                         .tracking(1.2)
                     
                     // Show selected point amount or total
                     if let selected = selectedDataPoint {
                         Text("₹\(Int(selected.amount).formattedIndian)")
-                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
                             .contentTransition(.numericText())
                     } else {
                         Text("₹\(Int(salesSummary.actual).formattedIndian)")
-                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     }
                     
                     HStack(spacing: 4) {
@@ -76,14 +76,15 @@ struct RevenueChartCard: View {
             // Chart
             if !salesSummary.trend.isEmpty {
                 chartView
-                    .frame(height: 220)
+                    .frame(minHeight: 220, maxHeight: .infinity)
                     .padding(.top, 16)
             } else {
                 Spacer()
-                    .frame(height: 220)
+                    .frame(minHeight: 220, maxHeight: .infinity)
             }
         }
         .padding(24)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
@@ -97,7 +98,7 @@ struct RevenueChartCard: View {
             ForEach(salesSummary.trend) { point in
                 // Area fill
                 AreaMark(
-                    x: .value("Date", point.date, unit: xAxisUnit),
+                    x: .value("Date", point.date),
                     y: .value("Revenue", point.amount)
                 )
                 .interpolationMethod(.catmullRom)
@@ -111,7 +112,7 @@ struct RevenueChartCard: View {
                 
                 // Main line
                 LineMark(
-                    x: .value("Date", point.date, unit: xAxisUnit),
+                    x: .value("Date", point.date),
                     y: .value("Revenue", point.amount)
                 )
                 .interpolationMethod(.catmullRom)
@@ -121,7 +122,7 @@ struct RevenueChartCard: View {
                 // Show a point marker for the top sales
                 if let topPoint = topSalesPoint, isSameUnit(point.date, topPoint.date), selectedDataPoint == nil {
                     PointMark(
-                        x: .value("Date", point.date, unit: xAxisUnit),
+                        x: .value("Date", point.date),
                         y: .value("Revenue", point.amount)
                     )
                     .symbolSize(60)
@@ -134,12 +135,12 @@ struct RevenueChartCard: View {
             
             // Selection rule line + point
             if let selected = selectedDataPoint {
-                RuleMark(x: .value("Date", selected.date, unit: xAxisUnit))
+                RuleMark(x: .value("Date", selected.date))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     .foregroundStyle(Color.blue.opacity(0.5))
                 
                 PointMark(
-                    x: .value("Date", selected.date, unit: xAxisUnit),
+                    x: .value("Date", selected.date),
                     y: .value("Revenue", selected.amount)
                 )
                 .symbolSize(100)
@@ -149,7 +150,7 @@ struct RevenueChartCard: View {
                 }
                 
                 PointMark(
-                    x: .value("Date", selected.date, unit: xAxisUnit),
+                    x: .value("Date", selected.date),
                     y: .value("Revenue", selected.amount)
                 )
                 .symbolSize(50)
@@ -268,11 +269,11 @@ struct RevenueChartCard: View {
     private var xAxisValues: AxisMarkValues {
         switch selectedPeriod {
         case .week:
-            return .automatic(desiredCount: 7)
+            return .stride(by: .day, count: 1)
         case .month:
-            return .automatic(desiredCount: 6)
+            return .stride(by: .day, count: 5)
         case .year:
-            return .automatic(desiredCount: 12)
+            return .stride(by: .month, count: 1)
         }
     }
     

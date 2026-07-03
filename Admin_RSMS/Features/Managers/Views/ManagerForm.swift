@@ -21,12 +21,11 @@ struct ManagerForm: View {
         _selectedStore = State(initialValue: memberToEdit?.location ?? "")
     }
     
+    @State private var showingValidationAlert = false
+    @State private var validationMessage = ""
+    
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Top Bar ──
-            topBar
-            
-            // ── Scrollable Content ──
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     
@@ -72,204 +71,190 @@ struct ManagerForm: View {
                 .padding(28)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            
-            // ── Bottom Action Bar ──
-            bottomBar
-        }
-        .navigationBarHidden(true)
-    }
-    
-    private var topBar: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Button(action: { onDismiss() }) {
-                Text("Close")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(uiColor: .systemBackground))
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
-            }
-            
-            Text(memberToEdit == nil ? "Manager" : "Edit Manager")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 4)
-        .background(Color(uiColor: .systemGroupedBackground))
-    }
-    
-    private var bottomBar: some View {
-        HStack(spacing: 16) {
-            Spacer()
-            
-            Button(action: {
-                if !fullName.isEmpty {
-                    let initials = fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
-                    
-                    let member = Manager(
-                        id: memberToEdit?.id ?? UUID(),
-                        name: fullName,
-                        email: emailAddress,
-                        role: "Manager",  // Hardcoded to Manager as required
-                        location: selectedStore.isEmpty ? "Assigned Store" : selectedStore,
-                        shift: memberToEdit?.shift ?? "New Hire",
-                        imageName: memberToEdit?.imageName,
-                        initials: initials.isEmpty ? "?" : initials
-                    )
-                    onSave(member)
+            .navigationTitle(memberToEdit == nil ? "Add Manager" : "Edit Manager")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        onDismiss()
+                    }
                 }
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: memberToEdit == nil ? "person.badge.plus" : "checkmark.circle.fill")
-                        .font(.system(size: 15))
-                    Text(memberToEdit == nil ? "Create" : "Update")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 12)
-                .background(Color(red: 0.1, green: 0.2, blue: 0.4))
-                .clipShape(Capsule())
-            }
-            .disabled(fullName.isEmpty)
-            .opacity(fullName.isEmpty ? 0.5 : 1.0)
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .background(.ultraThinMaterial)
-        .overlay(
-            Rectangle()
-                .fill(Color.gray.opacity(0.12))
-                .frame(height: 1),
-            alignment: .top
-        )
-    }
-    
-    private var roleSelectionField: some View {
-        EmptyView()
-    }
-    
-    private func inputField(label: String, placeholder: String, icon: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label.uppercased())
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.secondary)
-                .tracking(0.5)
-            
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
                 
-                TextField(placeholder, text: text)
-                    .font(.system(size: 15))
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: saveManager) {
+                        Text(memberToEdit == nil ? "Create" : "Update")
+                            .fontWeight(.bold)
+                    }
+                }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .background(Color(uiColor: .systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .alert(isPresented: $showingValidationAlert) {
+                Alert(
+                    title: Text("Missing Information"),
+                    message: Text(validationMessage),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
         }
-        .frame(maxWidth: .infinity)
     }
     
-    private var storeAssignmentField: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("STORE ASSIGNMENT")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.secondary)
-                .tracking(0.5)
-            
-            let activeStores = dataManager.stores.filter { !$0.isArchived }
-            
-            if activeStores.isEmpty {
+    private func saveManager() {
+        let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedEmail = emailAddress.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        if trimmedName.isEmpty {
+            validationMessage = "Please enter the manager's full name."
+            showingValidationAlert = true
+            return
+        }
+        
+        if trimmedEmail.isEmpty || !trimmedEmail.hasSuffix("@gmail.com") {
+            validationMessage = "Please enter a valid Gmail address (must end with @gmail.com)."
+            showingValidationAlert = true
+            return
+        }
+        
+        if selectedStore.isEmpty {
+            validationMessage = "Please select a store to assign the manager to."
+            showingValidationAlert = true
+            return
+        }
+        
+        let initials = trimmedName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+        
+        let member = Manager(
+            id: memberToEdit?.id ?? UUID(),
+            name: trimmedName,
+            email: trimmedEmail,
+            role: "Manager",  // Hardcoded to Manager as required
+            location: selectedStore,
+            shift: memberToEdit?.shift ?? "New Hire",
+            imageName: memberToEdit?.imageName,
+            initials: initials.isEmpty ? "?" : initials
+        )
+        onSave(member)
+    }
+        
+        private var roleSelectionField: some View {
+            EmptyView()
+        }
+        
+        private func inputField(label: String, placeholder: String, icon: String, text: Binding<String>) -> some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(label.uppercased())
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.5)
+                
                 HStack(spacing: 8) {
-                    Image(systemName: "storefront")
+                    Image(systemName: icon)
                         .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                    Text("No stores available")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
+                    
+                    TextField(placeholder, text: text)
                         .font(.system(size: 15))
-                    Spacer()
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 13)
                 .background(Color(uiColor: .systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else {
-                Menu {
-                    Button(action: { selectedStore = "" }) {
-                        Label("None", systemImage: selectedStore.isEmpty ? "checkmark" : "minus")
-                    }
-                    Divider()
-                    ForEach(activeStores) { store in
-                        Button(action: { selectedStore = store.name }) {
-                            if selectedStore == store.name {
-                                Label(store.name, systemImage: "checkmark")
-                            } else {
-                                Text(store.name)
-                            }
-                        }
-                    }
-                } label: {
+            }
+            .frame(maxWidth: .infinity)
+        }
+        
+        private var storeAssignmentField: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("STORE ASSIGNMENT")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.5)
+                
+                let activeStores = dataManager.stores.filter { !$0.isArchived }
+                
+                if activeStores.isEmpty {
                     HStack(spacing: 8) {
                         Image(systemName: "storefront")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                        
-                        if selectedStore.isEmpty {
-                            Text("Select a store...")
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text(selectedStore)
-                                .foregroundColor(.primary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 10))
+                        Text("No stores available")
                             .foregroundColor(.secondary)
+                            .font(.system(size: 15))
+                        Spacer()
                     }
-                    .font(.system(size: 15))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 13)
                     .background(Color(uiColor: .systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    Menu {
+                        Button(action: { selectedStore = "" }) {
+                            Label("None", systemImage: selectedStore.isEmpty ? "checkmark" : "minus")
+                        }
+                        Divider()
+                        ForEach(activeStores) { store in
+                            Button(action: { selectedStore = store.name }) {
+                                if selectedStore == store.name {
+                                    Label(store.name, systemImage: "checkmark")
+                                } else {
+                                    Text(store.name)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "storefront")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                            
+                            if selectedStore.isEmpty {
+                                Text("Select a store...")
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text(selectedStore)
+                                    .foregroundColor(.primary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                        .font(.system(size: 15))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                        .background(Color(uiColor: .systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                 }
             }
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
-    }
-
-    
-    private var onboardingNote: some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: "info.circle.fill")
-                .foregroundColor(.blue)
-                .font(.system(size: 20))
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Onboarding Invitation")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
-                Text("An invitation email will be sent immediately after account creation with instructions to set their password and complete their profile.")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.8))
+        
+        
+        private var onboardingNote: some View {
+            HStack(alignment: .top, spacing: 16) {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.blue)
+                    .font(.system(size: 20))
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Onboarding Invitation")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4))
+                    Text("An invitation email will be sent immediately after account creation with instructions to set their password and complete their profile.")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(red: 0.1, green: 0.2, blue: 0.4).opacity(0.8))
+                }
             }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.blue.opacity(0.05))
+            .cornerRadius(12)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.blue.opacity(0.05))
-        .cornerRadius(12)
     }
-}
 
-#Preview {
-    ManagerForm(
-        onDismiss: {},
-        onSave: { _ in }
-    )
-}
+    #Preview {
+        ManagerForm(
+            onDismiss: {},
+            onSave: { _ in }
+        )
+    }
+

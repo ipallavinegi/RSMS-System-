@@ -28,6 +28,7 @@ struct StoresView: View {
     @State private var searchText = ""
     @State private var showingAddStore = false
     @State private var storeToEdit: AdminStore? = nil
+    @State private var selectedStoreForDetails: AdminStore? = nil
     @State private var activeSort: StoreSortOption = .nameAscending
     
     // UI Constants
@@ -115,6 +116,9 @@ struct StoresView: View {
                                         dataManager.updateStore(restored)
                                     })
                                     .frame(width: cardWidth)
+                                    .onTapGesture {
+                                        selectedStoreForDetails = store
+                                    }
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -167,6 +171,11 @@ struct StoresView: View {
                         storeToEdit = nil
                     }
                 )
+            }
+            .sheet(item: $selectedStoreForDetails) { store in
+                StoreDetailModalView(store: store, onDismiss: {
+                    selectedStoreForDetails = nil
+                })
             }
             .navigationTitle("Stores")
             .navigationBarTitleDisplayMode(.inline)

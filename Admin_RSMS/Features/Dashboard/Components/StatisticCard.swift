@@ -13,26 +13,26 @@ struct StatisticCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // ── Top Row: Icon + Labels + Chevron ────────────────
-            HStack(alignment: .center, spacing: 14) {
+            HStack(alignment: .center, spacing: 16) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(iconBackground)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 52, height: 52)
                     Image(systemName: iconName)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.title2.weight(.bold))
                         .foregroundStyle(iconColor)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.uppercased())
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.caption.weight(.heavy))
                         .foregroundStyle(Color.secondary.opacity(0.8))
-                        .tracking(0.8)
+                        .tracking(1.0)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     
                     Text(title)
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.title3.weight(.bold))
                         .foregroundStyle(Color.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -41,7 +41,7 @@ struct StatisticCard: View {
                 Spacer(minLength: 4)
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color(.tertiaryLabel))
             }
 
@@ -49,17 +49,17 @@ struct StatisticCard: View {
 
             // ── Value ───────────────────────────────────────────
             Text(value)
-                .font(.system(size: 46, weight: .bold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(Color.primary)
 
             // ── Footnote ────────────────────────────────────────
             HStack(spacing: 3) {
                 Text(footnoteLeft)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(Color.primary)
                     .lineLimit(1)
                 Text(footnoteRight)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(Color.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

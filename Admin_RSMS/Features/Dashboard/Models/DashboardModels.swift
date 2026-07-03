@@ -33,6 +33,10 @@ struct StorePerformanceItem: Identifiable {
         let formatted = Int(revenue)
         return "₹\(formatted.formattedIndian)"
     }
+    
+    var initials: String {
+        storeName.components(separatedBy: " ").compactMap { $0.first }.prefix(2).map(String.init).joined().uppercased()
+    }
 }
 
 // MARK: - Top Customers
@@ -45,6 +49,10 @@ struct TopCustomerItem: Identifiable {
 
     var spendText: String { "₹\(Int(spend).formattedIndian)" }
     var progress: Double { maxSpend > 0 ? spend / maxSpend : 0 }
+    
+    var initials: String {
+        customerName.components(separatedBy: " ").compactMap { $0.first }.prefix(2).map(String.init).joined().uppercased()
+    }
 }
 
 // MARK: - Revenue Period

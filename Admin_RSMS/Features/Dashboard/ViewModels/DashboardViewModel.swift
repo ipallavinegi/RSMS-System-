@@ -245,12 +245,15 @@ final class DashboardViewModel: ObservableObject {
             storePerformanceList = [
                 StorePerformanceItem(rank: 1, storeName: "Fifth Avenue", revenue: 842000),
                 StorePerformanceItem(rank: 2, storeName: "Champs-Élysées", revenue: 610000),
-                StorePerformanceItem(rank: 3, storeName: "Bond Street", revenue: 598000)
+                StorePerformanceItem(rank: 3, storeName: "Bond Street", revenue: 598000),
+                StorePerformanceItem(rank: 4, storeName: "Rodeo Drive", revenue: 475000)
             ]
         } else {
             storePerformanceList = [
                 StorePerformanceItem(rank: 4, storeName: "Rodeo Drive", revenue: 340000),
-                StorePerformanceItem(rank: 5, storeName: "Shibuya", revenue: 210000)
+                StorePerformanceItem(rank: 5, storeName: "Shibuya", revenue: 210000),
+                StorePerformanceItem(rank: 6, storeName: "Dubai Mall", revenue: 195000),
+                StorePerformanceItem(rank: 7, storeName: "Ginza", revenue: 152000)
             ]
         }
     }
@@ -318,7 +321,8 @@ final class DashboardViewModel: ObservableObject {
 
         switch selectedRevenuePeriod {
         case .week:
-            let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: -$0, to: Date()) }.reversed()
+            let todayStart = calendar.startOfDay(for: Date())
+            let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: -$0, to: todayStart) }.reversed()
             return days.map { day in
                 let amount = sales
                     .filter { $0.storeId == storeId && calendar.isDate($0.saleDate, inSameDayAs: day) }
@@ -326,15 +330,14 @@ final class DashboardViewModel: ObservableObject {
                 if amount > 0 {
                     return DailySalesPoint(date: day, amount: amount)
                 } else {
-                    // Map the weekday (Sunday=1..Saturday=7 in Calendar) to our 0-indexed array
                     let weekday = calendar.component(.weekday, from: day)
-                    // Convert: Sun(1)->6, Mon(2)->0, Tue(3)->1, Wed(4)->2, Thu(5)->3, Fri(6)->4, Sat(7)->5
                     let idx = (weekday + 5) % 7
                     return DailySalesPoint(date: day, amount: weeklyFallbacks[idx])
                 }
             }
         case .month:
-            let days = (0..<30).compactMap { calendar.date(byAdding: .day, value: -$0, to: Date()) }.reversed()
+            let todayStart = calendar.startOfDay(for: Date())
+            let days = (0..<30).compactMap { calendar.date(byAdding: .day, value: -$0, to: todayStart) }.reversed()
             return days.map { day in
                 let amount = sales
                     .filter { $0.storeId == storeId && calendar.isDate($0.saleDate, inSameDayAs: day) }
@@ -348,12 +351,12 @@ final class DashboardViewModel: ObservableObject {
                 }
             }
         case .year:
-            // Realistic monthly revenue with seasonal peaks (festive Q4, wedding season)
             let monthlyFallbacks: [Double] = [
                 1_500_000, 1_350_000, 1_620_000, 1_780_000, 1_950_000, 2_100_000,
                 1_880_000, 1_720_000, 2_250_000, 2_450_000, 2_680_000, 2_100_000
             ]
-            let months = (0..<12).compactMap { calendar.date(byAdding: .month, value: -$0, to: Date()) }.reversed()
+            let todayStart = calendar.startOfDay(for: Date())
+            let months = (0..<12).compactMap { calendar.date(byAdding: .month, value: -$0, to: todayStart) }.reversed()
             return months.map { month in
                 let amount = sales
                     .filter { sale in
