@@ -27,9 +27,9 @@ struct DashboardHeaderView: View {
             .padding(.vertical, 12)
             .background(Color(uiColor: .systemGray6))
             .clipShape(Capsule())
-            .frame(width: 350)
+            .frame(maxWidth: 350)
             
-            Spacer().frame(width: 24)
+            Spacer(minLength: 12).frame(maxWidth: 24)
             
             // Notification Bell
             ZStack(alignment: .topTrailing) {
@@ -48,7 +48,7 @@ struct DashboardHeaderView: View {
                     .offset(x: 4, y: -4)
             }
             
-            Spacer().frame(width: 20)
+             Spacer(minLength: 8).frame(maxWidth: 20)
             
             // Avatar
             Circle()

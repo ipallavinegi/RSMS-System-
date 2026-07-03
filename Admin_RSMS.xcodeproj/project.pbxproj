@@ -16,7 +16,6 @@
 		8E9289592FF566BC001C9D4C /* test_geocoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9289582FF566BC001C9D4C /* test_geocoder.swift */; };
 		8E92895A2FF566BC001C9D4C /* schema.json in Resources */ = {isa = PBXBuildFile; fileRef = 8E92894A2FF566BC001C9D4C /* schema.json */; };
 		8E92895B2FF566BC001C9D4C /* config.toml in Resources */ = {isa = PBXBuildFile; fileRef = 8E9289552FF566BC001C9D4C /* config.toml */; };
-		8E92895C2FF566BC001C9D4C /* linked-project.json in Resources */ = {isa = PBXBuildFile; fileRef = 8E92894B2FF566BC001C9D4C /* linked-project.json */; };
 		8E92895D2FF566BC001C9D4C /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 8E9289542FF566BC001C9D4C /* .gitignore */; };
 		8E92895E2FF566BC001C9D4C /* .npmrc in Resources */ = {isa = PBXBuildFile; fileRef = 8E92894D2FF566BC001C9D4C /* .npmrc */; };
 		8E92895F2FF566BC001C9D4C /* deno.json in Resources */ = {isa = PBXBuildFile; fileRef = 8E92894E2FF566BC001C9D4C /* deno.json */; };
@@ -26,7 +25,6 @@
 /* Begin PBXFileReference section */
 		545E2F922FEC4E550027DD55 /* Admin_RSMS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Admin_RSMS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E92894A2FF566BC001C9D4C /* schema.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = schema.json; sourceTree = "<group>"; };
-		8E92894B2FF566BC001C9D4C /* linked-project.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "linked-project.json"; sourceTree = "<group>"; };
 		8E92894D2FF566BC001C9D4C /* .npmrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = .npmrc; sourceTree = "<group>"; };
 		8E92894E2FF566BC001C9D4C /* deno.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = deno.json; sourceTree = "<group>"; };
 		8E92894F2FF566BC001C9D4C /* index.ts */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.typescript; path = index.ts; sourceTree = "<group>"; };
@@ -90,14 +88,6 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		8E92894C2FF566BC001C9D4C /* .temp */ = {
-			isa = PBXGroup;
-			children = (
-				8E92894B2FF566BC001C9D4C /* linked-project.json */,
-			);
-			path = .temp;
-			sourceTree = "<group>";
-		};
 		8E9289502FF566BC001C9D4C /* send-credentials */ = {
 			isa = PBXGroup;
 			children = (
@@ -128,7 +118,6 @@
 		8E9289562FF566BC001C9D4C /* supabase */ = {
 			isa = PBXGroup;
 			children = (
-				8E92894C2FF566BC001C9D4C /* .temp */,
 				8E9289532FF566BC001C9D4C /* functions */,
 				8E9289542FF566BC001C9D4C /* .gitignore */,
 				8E9289552FF566BC001C9D4C /* config.toml */,
@@ -211,7 +200,6 @@
 			files = (
 				8E92895A2FF566BC001C9D4C /* schema.json in Resources */,
 				8E92895B2FF566BC001C9D4C /* config.toml in Resources */,
-				8E92895C2FF566BC001C9D4C /* linked-project.json in Resources */,
 				8E92895D2FF566BC001C9D4C /* .gitignore in Resources */,
 				8E92895E2FF566BC001C9D4C /* .npmrc in Resources */,
 				8E92895F2FF566BC001C9D4C /* deno.json in Resources */,

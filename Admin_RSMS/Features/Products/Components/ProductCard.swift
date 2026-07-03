@@ -16,11 +16,7 @@ struct ProductCard: View {
         String(product.brand.prefix(1)).uppercased()
     }
 
-    // Every card in the grid uses these same numbers, so every card ends up
-    // the exact same size regardless of image orientation or text length.
     private let imageHeight: CGFloat = 160
-    private let nameHeight: CGFloat = 38   // reserves 2 lines, even for 1-line names
-    private let actionsHeight: CGFloat = 44 // reserved whether or not buttons are shown
 
     var body: some View {
         // The whole card is itself a Button (tap anywhere opens detail), and the
@@ -82,8 +78,6 @@ struct ProductCard: View {
         }
         .frame(height: imageHeight)
         .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .padding(8)
     }
 
     private var infoSection: some View {
@@ -91,14 +85,14 @@ struct ProductCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(product.productName)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 16, weight: .bold)) // Sightly bolder/larger for native feel
                         .foregroundColor(.primary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                        .frame(height: nameHeight, alignment: .top)
+                        // Removed hardcoded nameHeight frame natively
 
                     Text(product.brand)
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -108,43 +102,37 @@ struct ProductCard: View {
                     .foregroundColor(.rsmsBlue)
             }
 
-            // Same footer height on every card whether or not the approve/reject
-            // row is actually shown — this is what kept non-pending cards shorter.
-            Group {
-                if showActions {
-                    VStack(spacing: 8) {
-                        Divider()
-                        HStack(spacing: 10) {
-                            Button(action: onReject) {
-                                Text("Reject")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.red)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 9)
-                                    .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            }
-                            .buttonStyle(.borderless)
-
-                            Button(action: onApprove) {
-                                Text("Approve")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 9)
-                                    .background(Color.green, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            }
-                            .buttonStyle(.borderless)
+            if showActions {
+                VStack(spacing: 12) {
+                    Divider()
+                    HStack(spacing: 12) {
+                        Button(action: onReject) {
+                            Text("Reject")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         }
+                        .buttonStyle(.borderless)
+
+                        Button(action: onApprove) {
+                            Text("Approve")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.green, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        }
+                        .buttonStyle(.borderless)
                     }
-                } else {
-                    Color.clear
                 }
+                .padding(.top, 4)
             }
-            .frame(height: actionsHeight)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 4)
-        .padding(.bottom, 14)
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 16)
     }
 
     private var placeholder: some View {
