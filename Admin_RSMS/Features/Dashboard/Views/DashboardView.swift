@@ -3,82 +3,160 @@ import SwiftUI
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
     
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    
+    private var bottomGridColumns: [GridItem] {
+        if sizeClass == .compact {
+            return [GridItem(.flexible(), spacing: 24, alignment: .top)]
+        } else {
+            return [
+                GridItem(.flexible(), spacing: 24, alignment: .top),
+                GridItem(.flexible(), spacing: 24, alignment: .top),
+                GridItem(.flexible(), spacing: 24, alignment: .top)
+            ]
+        }
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-
+                DashboardHeaderView()
+                    .padding(.top, 16)
                 
                 // Top Section: Revenue Chart (Left) + 2x2 KPI Grid (Right)
-                HStack(alignment: .top, spacing: 24) {
-                    // Left: Revenue Chart Card
-                    RevenueChartCard(salesSummary: viewModel.salesSummary, selectedPeriod: $viewModel.selectedRevenuePeriod)
-                        .frame(maxWidth: .infinity)
-                    
-                    // Right: 2x2 Grid for Statistic Cards
-                    DashboardGrid(spacing: 16) {
-                        NavigationLink(destination: StoresView()) {
-                            StatisticCard(
-                                category: "Network", 
-                                title: "Stores", 
-                                value: "\(viewModel.networkStoresActive)", 
-                                footnoteLeft: "Active", 
-                                footnoteRight: "of \(viewModel.networkStoresTotal) total", 
-                                iconName: "building.2.fill", 
-                                iconColor: .blue, 
-                                iconBackground: .blue.opacity(0.15)
-                            )
-                        }
-                        .buttonStyle(.plain)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 24) {
+                        // Left: Revenue Chart Card
+                        RevenueChartCard(salesSummary: viewModel.salesSummary, selectedPeriod: $viewModel.selectedRevenuePeriod)
+                            .frame(maxWidth: .infinity)
                         
-                        NavigationLink(destination: ProductsView()) {
-                            StatisticCard(
-                                category: "Inventory", 
-                                title: "Products", 
-                                value: "\(viewModel.inventoryProductsCount)", 
-                                footnoteLeft: "Stocked", 
-                                footnoteRight: "items", 
-                                iconName: "shippingbox.fill", 
-                                iconColor: .green, 
-                                iconBackground: .green.opacity(0.15)
-                            )
+                        // Right: 2x2 Grid for Statistic Cards
+                        DashboardGrid(spacing: 16) {
+                            NavigationLink(destination: StoresView()) {
+                                StatisticCard(
+                                    category: "Network", 
+                                    title: "Stores", 
+                                    value: "\(viewModel.networkStoresActive)", 
+                                    footnoteLeft: "Active", 
+                                    footnoteRight: "of \(viewModel.networkStoresTotal) total", 
+                                    iconName: "building.2.fill", 
+                                    iconColor: .blue, 
+                                    iconBackground: .blue.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            NavigationLink(destination: ProductsView()) {
+                                StatisticCard(
+                                    category: "Inventory", 
+                                    title: "Products", 
+                                    value: "\(viewModel.inventoryProductsCount)", 
+                                    footnoteLeft: "Stocked", 
+                                    footnoteRight: "items", 
+                                    iconName: "shippingbox.fill", 
+                                    iconColor: .green, 
+                                    iconBackground: .green.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            NavigationLink(destination: ManagersView()) {
+                                StatisticCard(
+                                    category: "Staffing", 
+                                    title: "Managers", 
+                                    value: "\(viewModel.staffingManagersCount)", 
+                                    footnoteLeft: "Allocated", 
+                                    footnoteRight: "of \(viewModel.staffingManagersTotal) slots", 
+                                    iconName: "person.2.fill", 
+                                    iconColor: .orange, 
+                                    iconBackground: .orange.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            NavigationLink(destination: PromotionsView()) {
+                                StatisticCard(
+                                    category: "Marketing", 
+                                    title: "Promos", 
+                                    value: "\(viewModel.marketingPromosCount)", 
+                                    footnoteLeft: "Live", 
+                                    footnoteRight: "campaigns", 
+                                    iconName: "tag.fill", 
+                                    iconColor: .purple, 
+                                    iconBackground: .purple.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        
-                        NavigationLink(destination: ManagersView()) {
-                            StatisticCard(
-                                category: "Staffing", 
-                                title: "Managers", 
-                                value: "\(viewModel.staffingManagersCount)", 
-                                footnoteLeft: "Allocated", 
-                                footnoteRight: "of \(viewModel.staffingManagersTotal) slots", 
-                                iconName: "person.2.fill", 
-                                iconColor: .orange, 
-                                iconBackground: .orange.opacity(0.15)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        
-                        NavigationLink(destination: ComingSoonView(title: "Promos")) {
-                            StatisticCard(
-                                category: "Marketing", 
-                                title: "Promos", 
-                                value: "\(viewModel.marketingPromosCount)", 
-                                footnoteLeft: "Live", 
-                                footnoteRight: "campaigns", 
-                                iconName: "tag.fill", 
-                                iconColor: .purple, 
-                                iconBackground: .purple.opacity(0.15)
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity) 
                     }
-                    .frame(width: 480) // Fixed width for the grid side to let the chart stretch
+                    
+                    // Fallback to vertical stack on narrower screens
+                    VStack(spacing: 24) {
+                        RevenueChartCard(salesSummary: viewModel.salesSummary, selectedPeriod: $viewModel.selectedRevenuePeriod)
+                        
+                        DashboardGrid(spacing: 16) {
+                            NavigationLink(destination: StoresView()) {
+                                StatisticCard(
+                                    category: "Network", 
+                                    title: "Stores", 
+                                    value: "\(viewModel.networkStoresActive)", 
+                                    footnoteLeft: "Active", 
+                                    footnoteRight: "of \(viewModel.networkStoresTotal) total", 
+                                    iconName: "building.2.fill", 
+                                    iconColor: .blue, 
+                                    iconBackground: .blue.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            NavigationLink(destination: ProductsView()) {
+                                StatisticCard(
+                                    category: "Inventory", 
+                                    title: "Products", 
+                                    value: "\(viewModel.inventoryProductsCount)", 
+                                    footnoteLeft: "Stocked", 
+                                    footnoteRight: "items", 
+                                    iconName: "shippingbox.fill", 
+                                    iconColor: .green, 
+                                    iconBackground: .green.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            NavigationLink(destination: ManagersView()) {
+                                StatisticCard(
+                                    category: "Staffing", 
+                                    title: "Managers", 
+                                    value: "\(viewModel.staffingManagersCount)", 
+                                    footnoteLeft: "Allocated", 
+                                    footnoteRight: "of \(viewModel.staffingManagersTotal) slots", 
+                                    iconName: "person.2.fill", 
+                                    iconColor: .orange, 
+                                    iconBackground: .orange.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            NavigationLink(destination: PromotionsView()) {
+                                StatisticCard(
+                                    category: "Marketing", 
+                                    title: "Promos", 
+                                    value: "\(viewModel.marketingPromosCount)", 
+                                    footnoteLeft: "Live", 
+                                    footnoteRight: "campaigns", 
+                                    iconName: "tag.fill", 
+                                    iconColor: .purple, 
+                                    iconBackground: .purple.opacity(0.15)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
                 
-                // Bottom Section: 3 Columns
-                HStack(alignment: .top, spacing: 24) {
-                    
-                    // 1. Retail Health Score
+                // Bottom Section
+                LazyVGrid(columns: bottomGridColumns, spacing: 24) {
                     ActivityCard(
                         title: "Retail Health Score", 
                         subtitle: "NETWORK AVG"
@@ -104,12 +182,16 @@ struct DashboardView: View {
                                     Text(health.storeName)
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
                                     
                                     Spacer()
                                     
                                     Text(health.statusText)
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundColor(health.color)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
                                 }
                                 
                                 if health.id != viewModel.retailHealthScores.last?.id {
@@ -123,35 +205,17 @@ struct DashboardView: View {
                     // 2. Store Performance
                     ActivityCard(
                         title: "Store Performance",
-                        subtitle: ""
+                        subtitle: nil,
+                        trailingContent: {
+                            Picker("Filter", selection: $viewModel.selectedStorePerformanceFilter) {
+                                ForEach(StorePerformanceFilter.allCases) { filter in
+                                    Text(filter.rawValue).tag(filter)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
                     ) {
                         VStack(alignment: .leading, spacing: 16) {
-                            
-                            // Embedded picker for the custom card style
-                            HStack {
-                                Spacer()
-                                HStack(spacing: 0) {
-                                    ForEach(StorePerformanceFilter.allCases) { filter in
-                                        Text(filter.rawValue)
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(viewModel.selectedStorePerformanceFilter == filter ? Color.white : Color.clear)
-                                            .clipShape(Capsule())
-                                            .shadow(color: viewModel.selectedStorePerformanceFilter == filter ? Color.black.opacity(0.05) : Color.clear, radius: 2, y: 1)
-                                            .foregroundColor(viewModel.selectedStorePerformanceFilter == filter ? .primary : .secondary)
-                                            .onTapGesture {
-                                                withAnimation {
-                                                    viewModel.selectedStorePerformanceFilter = filter
-                                                }
-                                            }
-                                    }
-                                }
-                                .padding(4)
-                                .background(Color(uiColor: .systemGray6))
-                                .clipShape(Capsule())
-                            }
-                            .padding(.top, -40) // pulls it up to the header area
                             
                             ForEach(viewModel.storePerformanceList) { store in
                                 HStack(spacing: 12) {
@@ -231,20 +295,7 @@ struct DashboardView: View {
             .padding(.horizontal, 24)
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Dashboard")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                // Avatar
-                Circle()
-                    .fill(Color.orange)
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Text("AM")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                    )
-            }
-        }
+        .navigationBarHidden(true)
         .statusBarHidden()
         .task {
             await viewModel.load()
