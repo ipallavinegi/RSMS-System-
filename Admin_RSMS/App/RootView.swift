@@ -15,48 +15,62 @@ struct ContentView: View {
     @Namespace private var tabNamespace
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Main Content Area
-            Group {
-                switch activeView {
-                case .dashboard:
-                    NavigationStack {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // ── Tab Switcher: Centered below navigation title ──
+                HStack(spacing: 6) {
+                    TabBarButton(
+                        icon: "square.grid.2x2.fill", 
+                        title: "Dashboard", 
+                        view: .dashboard, 
+                        activeView: $activeView, 
+                        namespace: tabNamespace
+                    )
+                    
+                    TabBarButton(
+                        icon: "magnifyingglass.circle.fill", 
+                        title: "Audit Logs", 
+                        view: .auditLogs, 
+                        activeView: $activeView, 
+                        namespace: tabNamespace
+                    )
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+                .padding(.top, 4)
+                .padding(.bottom, 16)
+                
+                // ── Main Content ──
+                Group {
+                    switch activeView {
+                    case .dashboard:
                         DashboardView()
+                    case .auditLogs:
+                        ComingSoonView(title: "Audit Logs")
                     }
-                case .auditLogs:
-                    ComingSoonView(title: "Audit Logs")
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(activeView == .dashboard ? "Dashboard" : "Audit Logs")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 36, height: 36)
+                        .overlay(
+                            Text("AM")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                        )
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            // Glassmorphic Bottom Tab Bar matching reference image
-            HStack(spacing: 8) {
-                TabBarButton(
-                    icon: "square.grid.2x2.fill", 
-                    title: "Dashboard", 
-                    view: .dashboard, 
-                    activeView: $activeView, 
-                    namespace: tabNamespace
-                )
-                
-                TabBarButton(
-                    icon: "magnifyingglass.circle.fill", 
-                    title: "Audit Logs", 
-                    view: .auditLogs, 
-                    activeView: $activeView, 
-                    namespace: tabNamespace
-                )
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(.ultraThinMaterial)
-            .clipShape(Capsule())
-            .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
-            .padding(.bottom, 24)
-            .zIndex(1)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .background(Color(uiColor: .systemGroupedBackground))
     }
 }
 
@@ -75,24 +89,25 @@ struct TabBarButton: View {
                 activeView = view
             }
         }) {
-            VStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: isSelected ? .medium : .regular))
+                    .font(.system(size: 16, weight: isSelected ? .semibold : .regular))
                 Text(title)
-                    .font(.system(size: 11, weight: isSelected ? .medium : .regular))
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
             }
-            .foregroundColor(isSelected ? .blue : .primary)
-            .frame(width: 80, height: 60)
+            .foregroundColor(isSelected ? .blue : .secondary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
             .background(
                 ZStack {
                     if isSelected {
                         Capsule()
-                            .fill(Color.blue.opacity(0.15))
+                            .fill(Color.blue.opacity(0.12))
                             .matchedGeometryEffect(id: "TabBackground", in: namespace)
                     }
                 }
             )
-            .contentShape(Rectangle())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
     }
