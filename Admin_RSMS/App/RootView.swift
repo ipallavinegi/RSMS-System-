@@ -20,7 +20,7 @@ struct ContentView: View {
                 case .dashboard:
                     DashboardView()
                 case .auditLogs:
-                    ComingSoonView(title: "Audit Logs")
+                    AuditLogsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
