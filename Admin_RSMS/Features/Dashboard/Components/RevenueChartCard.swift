@@ -16,61 +16,17 @@ struct RevenueChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header Row
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("TOTAL REVENUE")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.secondary)
-                        .tracking(1.2)
-                    
-                    // Show selected point amount or total
-                    if let selected = selectedDataPoint {
-                        Text("₹\(Int(selected.amount).formattedIndian)")
-                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                            .contentTransition(.numericText())
-                    } else {
-                        Text("₹\(Int(salesSummary.actual).formattedIndian)")
-                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                    }
-                    
-                    HStack(spacing: 4) {
-                        if let selected = selectedDataPoint {
-                            Text(dateLabel(for: selected.date))
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.blue)
-                        } else {
-                            Image(systemName: salesSummary.variance < 0 ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
-                            Text("\(String(format: "%.1f", abs(salesSummary.variancePercent * 100)))% vs last period")
-                        }
-                    }
-                    .font(.subheadline.bold())
-                    .foregroundStyle(selectedDataPoint != nil ? .blue : (salesSummary.variance < 0 ? Color.red : Color.green))
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top) {
+                    revenueInfo
+                    Spacer()
+                    periodPicker
                 }
                 
-                Spacer()
-                
-                // Segmented picker
-                HStack(spacing: 0) {
-                    ForEach(RevenuePeriod.allCases) { period in
-                        Text(period.rawValue)
-                            .font(.subheadline.weight(.medium))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(selectedPeriod == period ? Color.white : Color.clear)
-                            .clipShape(Capsule())
-                            .shadow(color: selectedPeriod == period ? Color.black.opacity(0.05) : Color.clear, radius: 2, y: 1)
-                            .foregroundColor(selectedPeriod == period ? .primary : .secondary)
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    selectedPeriod = period
-                                    selectedDataPoint = nil
-                                }
-                            }
-                    }
+                VStack(alignment: .leading, spacing: 16) {
+                    revenueInfo
+                    periodPicker
                 }
-                .padding(4)
-                .background(Color(uiColor: .systemGray6))
-                .clipShape(Capsule())
             }
             
             // Chart
@@ -85,9 +41,71 @@ struct RevenueChartCard: View {
         }
         .padding(24)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        .background(Color.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: DS.cardRadius, style: .continuous))
+        .cardShadow()
+    }
+    
+    // MARK: - Header Subviews
+    
+    @ViewBuilder
+    private var revenueInfo: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("TOTAL REVENUE")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.secondary)
+                .tracking(1.2)
+            
+            // Show selected point amount or total
+            if let selected = selectedDataPoint {
+                Text("₹\(Int(selected.amount).formattedIndian)")
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .contentTransition(.numericText())
+            } else {
+                Text("₹\(Int(salesSummary.actual).formattedIndian)")
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+            }
+            
+            HStack(spacing: 4) {
+                if let selected = selectedDataPoint {
+                    Text(dateLabel(for: selected.date))
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.blue)
+                } else {
+                    Image(systemName: salesSummary.variance < 0 ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                    Text("\(String(format: "%.1f", abs(salesSummary.variancePercent * 100)))% vs last period")
+                }
+            }
+            .font(.subheadline.bold())
+            .foregroundStyle(selectedDataPoint != nil ? .blue : (salesSummary.variance < 0 ? Color.red : Color.green))
+        }
+    }
+    
+    @ViewBuilder
+    private var periodPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(RevenuePeriod.allCases) { period in
+                Text(period.rawValue)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(selectedPeriod == period ? Color.white : Color.clear)
+                    .clipShape(Capsule())
+                    .shadow(color: selectedPeriod == period ? Color.black.opacity(0.05) : Color.clear, radius: 2, y: 1)
+                    .foregroundColor(selectedPeriod == period ? .primary : .secondary)
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            selectedPeriod = period
+                            selectedDataPoint = nil
+                        }
+                    }
+            }
+        }
+        .padding(4)
+        .background(Color(uiColor: .systemGray6))
+        .clipShape(Capsule())
     }
     
     // MARK: - Chart View

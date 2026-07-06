@@ -18,15 +18,15 @@ import SwiftUI
 import Combine
 
 @MainActor
-class AuthManager: ObservableObject {
-    static let shared = AuthManager()
+public class AuthManager: ObservableObject {
+    public static let shared = AuthManager()
 
     // ⚠️ TEMPORARY — flip to false to re-enable the login screen.
     // While true, the app skips authentication entirely on launch.
-    private let authDisabledForTesting = true
+    private let authDisabledForTesting = false
 
-    @Published var isAuthenticated: Bool = false
-    @Published var currentUser: User?
+    @Published public var isAuthenticated: Bool = false
+    @Published public var currentUser: User?
 
     // Kept for future use if the OTP step is re-enabled.
     var pendingUser: User?

@@ -40,7 +40,7 @@ struct ProductDetailView: View {
 
                     Spacer()
 
-                    StatusBadge(status: status)
+                    ProductStatusBadge(status: status)
                 }
                 .padding(.vertical, 8)
             }
@@ -121,7 +121,7 @@ private struct ListRow: View {
     }
 }
 
-private struct StatusBadge: View {
+private struct ProductStatusBadge: View {
     let status: ApprovalStatus
 
     var body: some View {

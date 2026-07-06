@@ -46,11 +46,7 @@ struct ActivityCard<Content: View, TrailingContent: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(uiColor: .secondarySystemGroupedBackground),
-                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 0.5)
-        )
+        .background(Color.cardBG, in: RoundedRectangle(cornerRadius: DS.cardRadius, style: .continuous))
+        .cardShadow()
     }
 }

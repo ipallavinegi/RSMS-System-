@@ -36,7 +36,8 @@ struct ProductsView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20, alignment: .top)], spacing: 20) {
+                        let columns = sizeClass == .compact ? [GridItem(.flexible(), spacing: 20, alignment: .top)] : [GridItem(.adaptive(minimum: 300, maximum: 400), spacing: 20, alignment: .top)]
+                        LazyVGrid(columns: columns, spacing: 20) {
                             ForEach(filteredProducts) { product in
                                 ProductCard(
                                     product: product,
@@ -46,7 +47,7 @@ struct ProductsView: View {
                                     onApprove: { Task { await viewModel.approve(product) } },
                                     onReject: { productPendingRejection = product }
                                 )
-                                .frame(width: cardWidth)
+                                .frame(maxWidth: .infinity)
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -57,7 +58,7 @@ struct ProductsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(Color.pageBG)
         }
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
@@ -120,7 +121,7 @@ struct ProductsView: View {
         }
         .padding(.horizontal, sizeClass == .compact ? 16 : 32)
         .padding(.bottom, 14)
-        .background(Color(uiColor: .systemGroupedBackground))
+        .background(Color.pageBG)
         .overlay(Divider(), alignment: .bottom)
     }
 

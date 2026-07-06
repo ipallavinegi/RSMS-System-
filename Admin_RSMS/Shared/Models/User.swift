@@ -7,43 +7,43 @@
 
 import Foundation
 
-struct User: Codable, Identifiable {
-    let id: UUID
+public struct User: Codable, Identifiable {
+    public let id: UUID
 
     // Basic Information
-    let fullName: String
-    let username: String
-    let email: String
+    public let fullName: String
+    public let username: String
+    public let email: String
 
     // Authentication
-    let isVerified: Bool?
-    let lastLogin: Date?
+    public let isVerified: Bool?
+    public let lastLogin: Date?
 
     // Organization
-    let roleId: UUID
-    let storeId: UUID?
-    let shiftId: UUID?
+    public let roleId: UUID
+    public let storeId: UUID?
+    public let shiftId: UUID?
 
     // Employee Information
-    let employeeCode: String?
-    let designation: String?
+    public let employeeCode: String?
+    public let designation: String?
 
-    let phone: String?
-    let gender: String?
+    public let phone: String?
+    public let gender: String?
 
-    let dateOfBirth: String?      // PostgreSQL DATE type — stored as "YYYY-MM-DD"
-    let address: String?
+    public let dateOfBirth: String?      // PostgreSQL DATE type — stored as "YYYY-MM-DD"
+    public let address: String?
 
-    let joiningDate: String?      // PostgreSQL DATE type — stored as "YYYY-MM-DD"
-    let employeeStatus: String?
+    public let joiningDate: String?      // PostgreSQL DATE type — stored as "YYYY-MM-DD"
+    public let employeeStatus: String?
 
-    let profileImageURL: String?
+    public let profileImageURL: String?
 
     // Audit
-    let createdBy: UUID?
-    let createdAt: Date
+    public let createdBy: UUID?
+    public let createdAt: Date
 
-    enum CodingKeys: String, CodingKey {
+    public enum CodingKeys: String, CodingKey {
         case id
 
         case fullName = "full_name"
@@ -73,5 +73,49 @@ struct User: Codable, Identifiable {
 
         case createdBy = "created_by"
         case createdAt = "created_at"
+    }
+
+    public init(
+        id: UUID,
+        fullName: String,
+        username: String,
+        email: String,
+        isVerified: Bool? = nil,
+        lastLogin: Date? = nil,
+        roleId: UUID,
+        storeId: UUID? = nil,
+        shiftId: UUID? = nil,
+        employeeCode: String? = nil,
+        designation: String? = nil,
+        phone: String? = nil,
+        gender: String? = nil,
+        dateOfBirth: String? = nil,
+        address: String? = nil,
+        joiningDate: String? = nil,
+        employeeStatus: String? = nil,
+        profileImageURL: String? = nil,
+        createdBy: UUID? = nil,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.fullName = fullName
+        self.username = username
+        self.email = email
+        self.isVerified = isVerified
+        self.lastLogin = lastLogin
+        self.roleId = roleId
+        self.storeId = storeId
+        self.shiftId = shiftId
+        self.employeeCode = employeeCode
+        self.designation = designation
+        self.phone = phone
+        self.gender = gender
+        self.dateOfBirth = dateOfBirth
+        self.address = address
+        self.joiningDate = joiningDate
+        self.employeeStatus = employeeStatus
+        self.profileImageURL = profileImageURL
+        self.createdBy = createdBy
+        self.createdAt = createdAt
     }
 }

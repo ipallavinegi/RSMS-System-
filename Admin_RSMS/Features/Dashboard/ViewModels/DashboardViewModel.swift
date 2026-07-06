@@ -135,10 +135,13 @@ final class DashboardViewModel: ObservableObject {
         dm.$managers
             .receive(on: DispatchQueue.main)
             .sink { [weak self] managers in
-                guard !managers.isEmpty else { return }
-                self?.staffingManagersTotal = managers.count
-                // Counting non-archived managers as "active"
-                self?.staffingManagersCount = managers.filter { !$0.isArchived }.count
+                guard !managers.isEmpty, let self else { return }
+                // Only count staff_members whose role is actually a manager-type
+                // role — otherwise this card silently counted every staff member,
+                // not just managers.
+                let managerRoleMembers = managers.filter { self.isManagerRole($0.role) }
+                self.staffingManagersTotal = managerRoleMembers.count
+                self.staffingManagersCount = managerRoleMembers.filter { !$0.isArchived }.count
             }
             .store(in: &cancellables)
             
@@ -159,10 +162,18 @@ final class DashboardViewModel: ObservableObject {
         do {
             data = try await service.fetchDashboardData()
             usingSampleData = false
+            if let data, !data.failureReasons.isEmpty {
+                // Individual tables failed to fetch/decode but the dashboard
+                // still loaded with whatever succeeded — surface this instead
+                // of letting it look like a silent zero/empty state.
+                errorMessage = "Some data couldn't be loaded: \(data.failureReasons.joined(separator: "; "))"
+            }
         } catch {
-            data = DashboardSampleData.make()
-            usingSampleData = true
-            errorMessage = "Showing demo data until the dashboard tables are available."
+            // No mock/demo fallback: surface the real failure and keep the
+            // dashboard empty rather than showing fabricated numbers.
+            data = DashboardData.empty
+            usingSampleData = false
+            errorMessage = "Couldn't load dashboard data: \(error.localizedDescription)"
         }
 
         // Live count of currently-running promotions, from the same
@@ -228,7 +239,7 @@ final class DashboardViewModel: ObservableObject {
         let storeId = data.stores.first?.id ?? data.sales.first?.storeId ?? data.inventory.compactMap(\.storeId).first ?? UUID()
         customersById = Dictionary(uniqueKeysWithValues: data.customers.map { ($0.id, $0) })
         usersById = Dictionary(uniqueKeysWithValues: data.users.map { ($0.id, $0) })
-        salesSummary = makeSalesSummary(data: data, storeId: storeId)
+        salesSummary = makeSalesSummary(data: data)
         shiftSummary = makeShiftSummary(data: data, storeId: storeId)
         stockAlerts = makeStockAlerts(data: data, storeId: storeId)
         allAppointments = data.appointments
@@ -240,26 +251,26 @@ final class DashboardViewModel: ObservableObject {
             .prefix(4)
             .map { $0 }
             
-        // Populate core KPIs dynamically based on db lists, falling back to gorgeous design numbers when db lists are sparse or demo
-        // (Wait, we're now syncing from RSMSDataManager in realtime, so we don't need to rebuild them from `data` unless they are empty)
-        
+        // Populate core KPIs strictly from live data. RSMSDataManager publishes
+        // real-time counts once loaded; until then, fall back to the counts
+        // from this fetch — never to fabricated numbers.
         if RSMSDataManager.shared.stores.isEmpty {
-            let dbActiveStores = data.stores.filter { $0.status.lowercased() == "active" }.count
-            let dbTotalStores = data.stores.count
-            networkStoresActive = dbTotalStores > 1 ? dbActiveStores : 47
-            networkStoresTotal = dbTotalStores > 1 ? dbTotalStores : 50
+            networkStoresActive = data.stores.filter { $0.status.lowercased() == "active" }.count
+            networkStoresTotal = data.stores.count
         }
 
         if RSMSDataManager.shared.products.isEmpty {
-            let dbProductsCount = data.products.count
-            inventoryProductsTotal = dbProductsCount > 2 ? dbProductsCount : 1240
-            inventoryProductsCount = dbProductsCount > 2 ? data.products.filter({ $0.approvalStatus == ApprovalStatus.approved.rawValue }).count : 3
+            inventoryProductsTotal = data.products.count
+            inventoryProductsCount = data.products.filter { $0.approvalStatus == ApprovalStatus.approved.rawValue }.count
         }
 
         if RSMSDataManager.shared.managers.isEmpty {
-            let dbManagersCount = data.users.count // simple fallback
-            staffingManagersCount = dbManagersCount > 3 ? dbManagersCount : 45
-            staffingManagersTotal = 50
+            // Same manager-role filter as the live staff_members stream,
+            // applied to the closest available signal (designation) since
+            // DashboardData doesn't fetch staff_members/roles directly.
+            let managerRoleUsers = data.users.filter { isManagerRole($0.designation ?? "") }
+            staffingManagersTotal = managerRoleUsers.count
+            staffingManagersCount = managerRoleUsers.count
         }
 
         // Live campaigns = promotions whose schedule currently overlaps today,
@@ -268,45 +279,64 @@ final class DashboardViewModel: ObservableObject {
             .filter { $0.promotionState == .active }
             .count
 
-        // High fidelity components: Health Scores
-        retailHealthScores = [
-            StoreHealthScore(storeName: "Fifth Avenue", score: 91, statusText: "Optimal Health", colorHex: "34C759"),
-            StoreHealthScore(storeName: "Bond Street", score: 72, statusText: "Monitoring Required", colorHex: "FF9500"),
-            StoreHealthScore(storeName: "Rodeo Drive", score: 45, statusText: "Action Needed", colorHex: "FF3B30"),
-            StoreHealthScore(storeName: "Shibuya", score: 32, statusText: "Critical Threshold", colorHex: "FF2D55")
-        ]
+        // Retail Health Score — from the `health_scores` table, joined to store names.
+        let storeNamesById = Dictionary(uniqueKeysWithValues: data.stores.map { ($0.id, $0.storeName) })
+        retailHealthScores = data.healthScores
+            .sorted { $0.overallScore > $1.overallScore }
+            .compactMap { health -> StoreHealthScore? in
+                guard let storeName = storeNamesById[health.storeId] else { return nil }
+                let score = Int(health.overallScore.rounded())
+                let (statusText, colorHex) = healthBand(for: score)
+                return StoreHealthScore(storeName: storeName, score: score, statusText: statusText, colorHex: colorHex)
+            }
 
-        // Top Customers
-        topCustomersList = [
-            TopCustomerItem(customerName: "Aditya Sharma", spend: 142000, maxSpend: 142000),
-            TopCustomerItem(customerName: "Priya Patel", spend: 118000, maxSpend: 142000),
-            TopCustomerItem(customerName: "Vikram Singh", spend: 95000, maxSpend: 142000),
-            TopCustomerItem(customerName: "Ananya Iyer", spend: 82000, maxSpend: 142000)
-        ]
-
-        // Store Performance list based on segmented filter
-        if selectedStorePerformanceFilter == .highest {
-            storePerformanceList = [
-                StorePerformanceItem(rank: 1, storeName: "Fifth Avenue", revenue: 842000),
-                StorePerformanceItem(rank: 2, storeName: "Champs-Élysées", revenue: 610000),
-                StorePerformanceItem(rank: 3, storeName: "Bond Street", revenue: 598000),
-                StorePerformanceItem(rank: 4, storeName: "Rodeo Drive", revenue: 475000)
-            ]
-        } else {
-            storePerformanceList = [
-                StorePerformanceItem(rank: 4, storeName: "Rodeo Drive", revenue: 340000),
-                StorePerformanceItem(rank: 5, storeName: "Shibuya", revenue: 210000),
-                StorePerformanceItem(rank: 6, storeName: "Dubai Mall", revenue: 195000),
-                StorePerformanceItem(rank: 7, storeName: "Ginza", revenue: 152000)
-            ]
+        // Top Customers — real spend aggregated from completed sales.
+        let completedSales = data.sales.filter { $0.saleStatus.lowercased() != "cancelled" }
+        let spendByCustomer = Dictionary(grouping: completedSales, by: \.customerId)
+            .mapValues { $0.reduce(0) { $0 + $1.totalAmount } }
+        let rankedCustomers = spendByCustomer
+            .sorted { $0.value > $1.value }
+            .prefix(4)
+        let maxSpend = rankedCustomers.first?.value ?? 0
+        topCustomersList = rankedCustomers.compactMap { customerId, spend -> TopCustomerItem? in
+            guard let customer = customersById[customerId] else { return nil }
+            return TopCustomerItem(customerName: customer.name, spend: spend, maxSpend: maxSpend)
         }
+
+        // Store Performance — real revenue aggregated from completed sales, per store.
+        let revenueByStore = Dictionary(grouping: completedSales, by: \.storeId)
+            .mapValues { $0.reduce(0) { $0 + $1.totalAmount } }
+        let sortedStoreRevenue = selectedStorePerformanceFilter == .highest
+            ? revenueByStore.sorted { $0.value > $1.value }
+            : revenueByStore.sorted { $0.value < $1.value }
+        storePerformanceList = sortedStoreRevenue.prefix(4).enumerated().compactMap { index, entry -> StorePerformanceItem? in
+            guard let storeName = storeNamesById[entry.key] else { return nil }
+            return StorePerformanceItem(rank: index + 1, storeName: storeName, revenue: entry.value)
+        }
+    }
+
+    private func healthBand(for score: Int) -> (statusText: String, colorHex: String) {
+        switch score {
+        case 80...: return ("Optimal Health", "34C759")
+        case 60..<80: return ("Monitoring Required", "FF9500")
+        case 40..<60: return ("Action Needed", "FF3B30")
+        default: return ("Critical Threshold", "FF2D55")
+        }
+    }
+
+    /// Mirrors RSMSDataManager.isManagerRole — kept in sync manually since
+    /// that helper is private to RSMSDataManager. Treats any role/designation
+    /// containing "manager", "admin", or "lead" as a manager-type role.
+    private func isManagerRole(_ role: String) -> Bool {
+        let lower = role.lowercased()
+        return lower.contains("manager") || lower.contains("admin") || lower.contains("lead")
     }
 
     private var currentStoreId: UUID {
         data?.stores.first?.id ?? data?.inventory.compactMap(\.storeId).first ?? UUID()
     }
 
-    private func makeSalesSummary(data: DashboardData, storeId: UUID) -> SalesSummary {
+    private func makeSalesSummary(data: DashboardData) -> SalesSummary {
         let interval: DateInterval
         switch selectedRevenuePeriod {
         case .week:
@@ -316,16 +346,18 @@ final class DashboardViewModel: ObservableObject {
         case .year:
             interval = calendar.dateInterval(of: .year, for: Date()) ?? DateInterval(start: Date(), duration: 31_536_000)
         }
-        
+
+        // Network-wide: this is the corporate "Total Revenue" card, so it
+        // aggregates sales across every store rather than one arbitrarily
+        // chosen store.
         let periodSales = data.sales.filter {
-            $0.storeId == storeId &&
             $0.saleStatus.lowercased() != "cancelled" &&
             interval.contains($0.saleDate)
         }
         let saleIds = Set(periodSales.map(\.id))
         let periodItems = data.saleItems.filter { saleIds.contains($0.saleId) }
         let actual = periodSales.reduce(0) { $0 + $1.totalAmount }
-        let target = matchingTarget(in: data.salesTargets, storeId: storeId, interval: interval)
+        let target = matchingTarget(in: data.storeTargets, interval: interval)
         let transactionCount = periodSales.count
         let unitsSold = periodItems.reduce(0) { $0 + $1.quantity }
         let averageTransactionValue = transactionCount == 0 ? 0 : actual / Double(transactionCount)
@@ -339,66 +371,52 @@ final class DashboardViewModel: ObservableObject {
             averageTransactionValue: averageTransactionValue,
             unitsPerTransaction: unitsPerTransaction,
             estimatedGrossMargin: actual * 0.42,
-            trend: makeTrend(from: data.sales, storeId: storeId)
+            trend: makeTrend(from: data.sales)
         )
     }
 
-    private func matchingTarget(in targets: [SalesTarget], storeId: UUID, interval: DateInterval) -> Double {
-        let exact = targets.first {
-            $0.storeId == storeId &&
-            $0.periodType.lowercased() == selectedRevenuePeriod.rawValue.lowercased() &&
-            calendar.isDate($0.periodStart, inSameDayAs: interval.start)
-        }
-
-        if let exact { return exact.targetAmount }
-
+    private func matchingTarget(in targets: [StoreTarget], interval: DateInterval) -> Double {
+        // `store_targets` has one row per store per calendar month — there's
+        // no period_type/period_start to match against directly, so the
+        // network-wide target for the selected period is derived from
+        // whichever month(s) the interval falls in.
         switch selectedRevenuePeriod {
-        case .week: return 750_000
-        case .month: return 3_200_000
-        case .year: return 38_000_000
+        case .month:
+            let matching = targets.filter { calendar.isDate($0.targetMonth, equalTo: interval.start, toGranularity: .month) }
+            return matching.reduce(0) { $0 + $1.revenueTarget }
+        case .week:
+            // Prorate that month's total target down to a 7-day share.
+            let matching = targets.filter { calendar.isDate($0.targetMonth, equalTo: interval.start, toGranularity: .month) }
+            let monthlyTotal = matching.reduce(0) { $0 + $1.revenueTarget }
+            let daysInMonth = calendar.range(of: .day, in: .month, for: interval.start)?.count ?? 30
+            return monthlyTotal / Double(daysInMonth) * 7
+        case .year:
+            let matching = targets.filter { calendar.isDate($0.targetMonth, equalTo: interval.start, toGranularity: .year) }
+            return matching.reduce(0) { $0 + $1.revenueTarget }
         }
     }
 
-    private func makeTrend(from sales: [Sale], storeId: UUID) -> [DailySalesPoint] {
-        // Realistic fallback amounts per weekday index (Mon=0..Sun=6), peaking on Saturday
-        let weeklyFallbacks: [Double] = [72_000, 58_000, 65_000, 81_000, 95_000, 108_000, 45_000]
-
+    private func makeTrend(from sales: [Sale]) -> [DailySalesPoint] {
         switch selectedRevenuePeriod {
         case .week:
             let todayStart = calendar.startOfDay(for: Date())
             let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: -$0, to: todayStart) }.reversed()
             return days.map { day in
                 let amount = sales
-                    .filter { $0.storeId == storeId && calendar.isDate($0.saleDate, inSameDayAs: day) }
+                    .filter { calendar.isDate($0.saleDate, inSameDayAs: day) }
                     .reduce(0) { $0 + $1.totalAmount }
-                if amount > 0 {
-                    return DailySalesPoint(date: day, amount: amount)
-                } else {
-                    let weekday = calendar.component(.weekday, from: day)
-                    let idx = (weekday + 5) % 7
-                    return DailySalesPoint(date: day, amount: weeklyFallbacks[idx])
-                }
+                return DailySalesPoint(date: day, amount: amount)
             }
         case .month:
             let todayStart = calendar.startOfDay(for: Date())
             let days = (0..<30).compactMap { calendar.date(byAdding: .day, value: -$0, to: todayStart) }.reversed()
             return days.map { day in
                 let amount = sales
-                    .filter { $0.storeId == storeId && calendar.isDate($0.saleDate, inSameDayAs: day) }
+                    .filter { calendar.isDate($0.saleDate, inSameDayAs: day) }
                     .reduce(0) { $0 + $1.totalAmount }
-                if amount > 0 {
-                    return DailySalesPoint(date: day, amount: amount)
-                } else {
-                    let dayVal = Double(calendar.component(.day, from: day))
-                    let finalAmount = 75_000 + cos(dayVal * 0.5) * 25_000 + sin(dayVal * 1.3) * 10_000
-                    return DailySalesPoint(date: day, amount: finalAmount)
-                }
+                return DailySalesPoint(date: day, amount: amount)
             }
         case .year:
-            let monthlyFallbacks: [Double] = [
-                1_500_000, 1_350_000, 1_620_000, 1_780_000, 1_950_000, 2_100_000,
-                1_880_000, 1_720_000, 2_250_000, 2_450_000, 2_680_000, 2_100_000
-            ]
             let todayStart = calendar.startOfDay(for: Date())
             let months = (0..<12).compactMap { calendar.date(byAdding: .month, value: -$0, to: todayStart) }.reversed()
             return months.map { month in
@@ -407,15 +425,10 @@ final class DashboardViewModel: ObservableObject {
                         guard let saleMonth = calendar.dateComponents([.year, .month], from: sale.saleDate).month,
                               let currentMonth = calendar.dateComponents([.year, .month], from: month).month
                         else { return false }
-                        return sale.storeId == storeId && saleMonth == currentMonth
+                        return saleMonth == currentMonth
                     }
                     .reduce(0) { $0 + $1.totalAmount }
-                if amount > 0 {
-                    return DailySalesPoint(date: month, amount: amount)
-                } else {
-                    let monthIdx = (calendar.component(.month, from: month) - 1) % 12
-                    return DailySalesPoint(date: month, amount: monthlyFallbacks[monthIdx])
-                }
+                return DailySalesPoint(date: month, amount: amount)
             }
         }
     }
@@ -431,14 +444,12 @@ final class DashboardViewModel: ObservableObject {
             .sorted { ($0.startDate(on: Date(), calendar: calendar) ?? Date()) < ($1.startDate(on: Date(), calendar: calendar) ?? Date()) }
             .first
 
-        let selectedAssignments = data.shiftAssignments.filter {
-            guard let current else { return false }
-            return $0.shiftId == current.id && calendar.isDate($0.assignmentDate, inSameDayAs: selectedShiftDate)
-        }
-        let assignedIds = Set(selectedAssignments.map(\.userId))
+        // There is no `shift_assignments` join table in the real schema —
+        // a user's shift is assigned directly via `users.shift_id`
+        // (RSMS schema doc, table 4), so scheduling is read straight off
+        // the User records for the current shift and store.
         let scheduled = data.users.filter { user in
-            if !assignedIds.isEmpty { return assignedIds.contains(user.id) }
-            return user.storeId == storeId && user.shiftId == current?.id
+            user.storeId == storeId && user.shiftId == current?.id
         }
         let attendance = data.attendance.filter { calendar.isDate($0.attendanceDate, inSameDayAs: selectedShiftDate) }
         let presentIds = Set(attendance.filter { $0.checkIn != nil && $0.status.lowercased() != "absent" }.map(\.employeeId))

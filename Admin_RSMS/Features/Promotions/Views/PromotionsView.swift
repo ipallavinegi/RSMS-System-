@@ -34,8 +34,9 @@ struct PromotionsView: View {
                     )
                 } else {
                     ScrollView {
+                        let columns = sizeClass == .compact ? [GridItem(.flexible(), spacing: 20)] : [GridItem(.adaptive(minimum: 300, maximum: 400), spacing: 20)]
                         LazyVGrid(
-                            columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)],
+                            columns: columns,
                             alignment: .leading,
                             spacing: 20
                         ) {
@@ -44,7 +45,7 @@ struct PromotionsView: View {
                                     promotion: promotion,
                                     onTap: { editingPromotion = promotion }
                                 )
-                                .frame(width: cardWidth)
+                                .frame(maxWidth: .infinity)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -55,7 +56,7 @@ struct PromotionsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(Color.pageBG)
         }
         .navigationTitle("Promotions")
         .navigationBarTitleDisplayMode(.large)

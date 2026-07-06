@@ -35,9 +35,9 @@ struct ProductCard: View {
             imageSection
             infoSection
         }
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        .background(Color.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: DS.cardRadius, style: .continuous))
+        .cardShadow()
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
     }
