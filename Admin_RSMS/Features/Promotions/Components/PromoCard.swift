@@ -17,9 +17,31 @@ struct PromoCard: View {
 
                 contentSection
             }
-            .background(Color.cardBG)
-            .clipShape(RoundedRectangle(cornerRadius: DS.cardRadius, style: .continuous))
-            .cardShadow()
+            .background(
+                Color(uiColor: .secondarySystemGroupedBackground)
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: 18,
+                    style: .continuous
+                )
+            )
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: 18,
+                    style: .continuous
+                )
+                .stroke(
+                    Color.black.opacity(0.04),
+                    lineWidth: 1
+                )
+            )
+            .shadow(
+                color: .black.opacity(0.04),
+                radius: 12,
+                x: 0,
+                y: 4
+            )
         }
         .buttonStyle(PromoCardButtonStyle())
     }

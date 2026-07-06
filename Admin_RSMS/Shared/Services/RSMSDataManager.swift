@@ -288,13 +288,11 @@ class RSMSDataManager: ObservableObject {
                         // 3. Find the store to get store_id
                         let store = self.stores.first(where: { $0.name == member.location })
                         
-                        let generatedUsername = member.email.split(separator: "@").first.map(String.init)?.lowercased() ?? String(member.name.prefix(6)).lowercased()
-                        
                         // 4. Insert into users table using AppUser payload
                         let newUser = AppUser(
                             id: UUID(),
                             fullName: member.name,
-                            username: generatedUsername.replacingOccurrences(of: ".", with: ""),
+                            username: member.email,
                             password: randomPassword,
                             email: member.email,
                             roleId: role.id,
@@ -313,7 +311,6 @@ class RSMSDataManager: ObservableObject {
                         let emailParams = [
                             "userEmail": member.email,
                             "userName": member.name,
-                            "username": newUser.username,
                             "password": randomPassword,
                             "role": member.role
                         ]

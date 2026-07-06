@@ -119,9 +119,9 @@ struct ManagerCard: View {
             .padding(12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: DS.cardRadius, style: .continuous))
-        .cardShadow()
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
         .opacity(member.isArchived ? 0.6 : 1.0)
         .grayscale(member.isArchived ? 1.0 : 0.0)
     }

@@ -131,9 +131,9 @@ struct StoreCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: DS.cardRadius, style: .continuous))
-        .cardShadow()
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
         .opacity(store.isArchived ? 0.6 : 1.0)
         .grayscale(store.isArchived ? 1.0 : 0.0)
     }

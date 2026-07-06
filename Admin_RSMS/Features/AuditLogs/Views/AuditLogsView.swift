@@ -33,7 +33,7 @@ struct AuditLogsView: View {
             .padding(.top, 20)
             .padding(.bottom, 40)
         }
-        .background(Color.pageBG)
+        .background(Color.rsmsBackground)
         .shareSheet(url: $viewModel.exportedFileURL)
         .sheet(item: Binding(
             get: { viewModel.inspectorContent },

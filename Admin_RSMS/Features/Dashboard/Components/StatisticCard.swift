@@ -13,24 +13,36 @@ struct StatisticCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // ── Top Row: Icon + Labels + Chevron ────────────────
-            ViewThatFits(in: .horizontal) {
-                // Wide layout
-                HStack(alignment: .center, spacing: 16) {
-                    iconView
-                    textLabels
-                    Spacer(minLength: 4)
-                    chevronView
+            HStack(alignment: .center, spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(iconBackground)
+                        .frame(width: 52, height: 52)
+                    Image(systemName: iconName)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(iconColor)
                 }
-                
-                // Narrow layout
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        iconView
-                        Spacer()
-                        chevronView
-                    }
-                    textLabels
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(category.uppercased())
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(Color.secondary.opacity(0.8))
+                        .tracking(1.0)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    
+                    Text(title)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(.tertiaryLabel))
             }
 
             Spacer(minLength: 4)
@@ -53,48 +65,14 @@ struct StatisticCard: View {
                     .minimumScaleFactor(0.8)
             }
         }
-        .padding(16)
+        .padding(24) // Reverted back to 24 for proper spacing and matching height
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.cardBG, in: RoundedRectangle(cornerRadius: DS.cardRadius, style: .continuous))
-        .cardShadow()
-    }
-    
-    // MARK: - Subviews
-    
-    @ViewBuilder
-    private var iconView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(iconBackground)
-                .frame(width: 44, height: 44) // slightly smaller for better fit
-            Image(systemName: iconName)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(iconColor)
-        }
-    }
-    
-    @ViewBuilder
-    private var textLabels: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(category.uppercased())
-                .font(.caption2.weight(.heavy))
-                .foregroundStyle(Color.secondary.opacity(0.8))
-                .tracking(1.0)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            
-            Text(title)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Color.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-    }
-    
-    @ViewBuilder
-    private var chevronView: some View {
-        Image(systemName: "chevron.right")
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Color(.tertiaryLabel))
+        .background(Color(uiColor: .secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.04), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 3)
     }
 }

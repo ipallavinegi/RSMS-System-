@@ -84,114 +84,113 @@ struct StoresView: View {
     }
     
     var body: some View {
-        Group {
-            if dataManager.isLoading && dataManager.stores.isEmpty {
-                // Full-screen loading on first launch
-                VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.4)
-                    Text("Loading stores…")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+        if dataManager.isLoading && dataManager.stores.isEmpty {
+            // Full-screen loading on first launch
+            VStack(spacing: 16) {
+                ProgressView()
+                    .scaleEffect(1.4)
+                Text("Loading stores…")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
+        } else {
+            VStack(spacing: 0) {
+                if viewMode == .grid {
+                    // Grid of Stores
+                    ScrollView {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 20)], spacing: 20) {
+                            ForEach(filteredStores) { store in
+                                StoreCard(store: store, onEdit: {
+                                    storeToEdit = store
+                                }, onDelete: {
+                                    dataManager.removeStore(store)
+                                }, onRestore: {
+                                    var restored = store
+                                    restored.isArchived = false
+                                    dataManager.updateStore(restored)
+                                })
+                                .frame(width: cardWidth)
+                                .onTapGesture {
+                                    selectedStoreForDetails = store
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, sizeClass == .compact ? 16 : 32)
+                        .padding(.top, 16)
+                        .padding(.bottom, 100)
+                    }
+                } else {
+                    // Full Screen Map with optional details sidebar
+                    mapViewContent
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.pageBG)
-            } else {
-                VStack(spacing: 0) {
-                    Picker("View Mode", selection: $viewMode) {
+            }
+            .searchable(text: $searchText, prompt: "Search stores or managers...")
+            .background(Color(uiColor: .systemGroupedBackground))
+            .alert("Error", isPresented: Binding(
+                get: { dataManager.errorMessage != nil },
+                set: { if !$0 { dataManager.errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { dataManager.errorMessage = nil }
+            } message: {
+                Text(dataManager.errorMessage ?? "")
+            }
+            .onAppear {
+                Task { await dataManager.fetchStores() }
+            }
+            .refreshable {
+                await dataManager.fetchAll()
+            }
+            .sheet(isPresented: $showingAddStore) {
+                AddStoreView(
+                    onDismiss: {
+                        showingAddStore = false
+                    },
+                    editingStore: nil,
+                    onSave: { store in
+                        dataManager.addStore(store)
+                        showingAddStore = false
+                    }
+                )
+            }
+            .sheet(item: $storeToEdit) { store in
+                AddStoreView(
+                    onDismiss: { storeToEdit = nil },
+                    editingStore: store,
+                    onSave: { updatedStore in
+                        dataManager.updateStore(updatedStore)
+                        storeToEdit = nil
+                    }
+                )
+            }
+            .sheet(item: $selectedStoreForDetails) { store in
+                StoreDetailModalView(store: store, onDismiss: {
+                    selectedStoreForDetails = nil
+                })
+            }
+            .navigationTitle("Stores")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                
+                ToolbarItem(placement: .principal) {
+                    Picker("View", selection: $viewMode) {
                         Text("Grid").tag(ViewMode.grid)
                         Text("Map").tag(ViewMode.map)
                     }
                     .pickerStyle(.segmented)
-                    .frame(maxWidth: 250)
-                    .padding(.vertical, 12)
-                    
-                    if viewMode == .grid {
-                        // Grid of Stores
-                        ScrollView {
-                            let columns = sizeClass == .compact ? [GridItem(.flexible(), spacing: 20)] : [GridItem(.adaptive(minimum: 300, maximum: 400), spacing: 20)]
-                            LazyVGrid(columns: columns, spacing: 20) {
-                                ForEach(filteredStores) { store in
-                                    StoreCard(store: store, onEdit: {
-                                        storeToEdit = store
-                                    }, onDelete: {
-                                        dataManager.removeStore(store)
-                                    }, onRestore: {
-                                        var restored = store
-                                        restored.isArchived = false
-                                        dataManager.updateStore(restored)
-                                    })
-                                    .frame(maxWidth: .infinity)
-                                    .onTapGesture {
-                                        selectedStoreForDetails = store
-                                    }
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, sizeClass == .compact ? 16 : 32)
-                            .padding(.top, 16)
-                            .padding(.bottom, 100)
-                        }
-                    } else {
-                        // Full Screen Map with optional details sidebar
-                        mapViewContent
-                    }
+                    .frame(width: 160)
                 }
-                .searchable(text: $searchText, prompt: "Search stores or managers...")
-                .background(Color.pageBG)
-            }
-        }
-        .alert("Error", isPresented: Binding(
-            get: { dataManager.errorMessage != nil },
-            set: { if !$0 { dataManager.errorMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) { dataManager.errorMessage = nil }
-        } message: {
-            Text(dataManager.errorMessage ?? "")
-        }
-        .onAppear {
-            Task { await dataManager.fetchStores() }
-        }
-        .refreshable {
-            await dataManager.fetchAll()
-        }
-        .sheet(isPresented: $showingAddStore) {
-            AddStoreView(
-                onDismiss: {
-                    showingAddStore = false
-                },
-                editingStore: nil,
-                onSave: { store in
-                    dataManager.addStore(store)
-                    showingAddStore = false
-                }
-            )
-        }
-        .sheet(item: $storeToEdit) { store in
-            AddStoreView(
-                onDismiss: { storeToEdit = nil },
-                editingStore: store,
-                onSave: { updatedStore in
-                    dataManager.updateStore(updatedStore)
-                    storeToEdit = nil
-                }
-            )
-        }
-        .sheet(item: $selectedStoreForDetails) { store in
-            StoreDetailModalView(store: store, onDismiss: {
-                selectedStoreForDetails = nil
-            })
-        }
-        .navigationTitle("Stores")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                sortMenu
                 
-                Button(action: { showingAddStore = true }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.accentColor)
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    sortMenu
+                    
+                    Button(action: { showingAddStore = true }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    }
                 }
             }
         }

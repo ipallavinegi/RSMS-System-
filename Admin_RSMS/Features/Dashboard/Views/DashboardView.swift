@@ -10,15 +10,6 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote.weight(.medium))
-                        .foregroundColor(.red)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                }
-
                 // Top Section: Revenue Chart (Left) + 2x2 KPI Grid (Right)
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 24) {
@@ -31,13 +22,13 @@ struct DashboardView: View {
                         DashboardGrid(spacing: 16) {
                             NavigationLink(destination: StoresView()) {
                                 StatisticCard(
-                                    category: "Network",
-                                    title: "Stores",
-                                    value: "\(viewModel.networkStoresActive)",
-                                    footnoteLeft: "Active",
-                                    footnoteRight: "of \(viewModel.networkStoresTotal) total",
-                                    iconName: "building.2.fill",
-                                    iconColor: .blue,
+                                    category: "Network", 
+                                    title: "Stores", 
+                                    value: "\(viewModel.networkStoresActive)", 
+                                    footnoteLeft: "Active", 
+                                    footnoteRight: "of \(viewModel.networkStoresTotal) total", 
+                                    iconName: "building.2.fill", 
+                                    iconColor: .blue, 
                                     iconBackground: .blue.opacity(0.15)
                                 )
                             }
@@ -45,13 +36,13 @@ struct DashboardView: View {
                             
                             NavigationLink(destination: ProductsView()) {
                                 StatisticCard(
-                                    category: "Inventory",
-                                    title: "Products",
-                                    value: "\(viewModel.inventoryProductsCount)",
-                                    footnoteLeft: "Stocked",
-                                    footnoteRight: "items",
-                                    iconName: "shippingbox.fill",
-                                    iconColor: .green,
+                                    category: "Inventory", 
+                                    title: "Products", 
+                                    value: "\(viewModel.inventoryProductsCount)", 
+                                    footnoteLeft: "Stocked", 
+                                    footnoteRight: "items", 
+                                    iconName: "shippingbox.fill", 
+                                    iconColor: .green, 
                                     iconBackground: .green.opacity(0.15)
                                 )
                             }
@@ -59,13 +50,13 @@ struct DashboardView: View {
                             
                             NavigationLink(destination: ManagersView()) {
                                 StatisticCard(
-                                    category: "Staffing",
-                                    title: "Managers",
-                                    value: "\(viewModel.staffingManagersCount)",
-                                    footnoteLeft: "Allocated",
-                                    footnoteRight: "of \(viewModel.staffingManagersTotal) slots",
-                                    iconName: "person.2.fill",
-                                    iconColor: .orange,
+                                    category: "Staffing", 
+                                    title: "Managers", 
+                                    value: "\(viewModel.staffingManagersCount)", 
+                                    footnoteLeft: "Allocated", 
+                                    footnoteRight: "of \(viewModel.staffingManagersTotal) slots", 
+                                    iconName: "person.2.fill", 
+                                    iconColor: .orange, 
                                     iconBackground: .orange.opacity(0.15)
                                 )
                             }
@@ -73,19 +64,19 @@ struct DashboardView: View {
                             
                             NavigationLink(destination: PromotionsView()) {
                                 StatisticCard(
-                                    category: "Marketing",
-                                    title: "Promos",
-                                    value: "\(viewModel.marketingPromosCount)",
-                                    footnoteLeft: "Live",
-                                    footnoteRight: "campaigns",
-                                    iconName: "tag.fill",
-                                    iconColor: .purple,
+                                    category: "Marketing", 
+                                    title: "Promos", 
+                                    value: "\(viewModel.marketingPromosCount)", 
+                                    footnoteLeft: "Live", 
+                                    footnoteRight: "campaigns", 
+                                    iconName: "tag.fill", 
+                                    iconColor: .purple, 
                                     iconBackground: .purple.opacity(0.15)
                                 )
                             }
                             .buttonStyle(.plain)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity) 
                     }
                     .fixedSize(horizontal: false, vertical: true)
                     
@@ -96,13 +87,13 @@ struct DashboardView: View {
                         DashboardGrid(spacing: 16) {
                             NavigationLink(destination: StoresView()) {
                                 StatisticCard(
-                                    category: "Network",
-                                    title: "Stores",
-                                    value: "\(viewModel.networkStoresActive)",
-                                    footnoteLeft: "Active",
-                                    footnoteRight: "of \(viewModel.networkStoresTotal) total",
-                                    iconName: "building.2.fill",
-                                    iconColor: .blue,
+                                    category: "Network", 
+                                    title: "Stores", 
+                                    value: "\(viewModel.networkStoresActive)", 
+                                    footnoteLeft: "Active", 
+                                    footnoteRight: "of \(viewModel.networkStoresTotal) total", 
+                                    iconName: "building.2.fill", 
+                                    iconColor: .blue, 
                                     iconBackground: .blue.opacity(0.15)
                                 )
                             }
@@ -110,13 +101,13 @@ struct DashboardView: View {
                             
                             NavigationLink(destination: ProductsView()) {
                                 StatisticCard(
-                                    category: "Inventory",
-                                    title: "Products",
-                                    value: "\(viewModel.inventoryProductsCount)",
-                                    footnoteLeft: "Approved",
-                                    footnoteRight: "of \(viewModel.inventoryProductsTotal) total",
-                                    iconName: "shippingbox.fill",
-                                    iconColor: .green,
+                                    category: "Inventory", 
+                                    title: "Products", 
+                                    value: "\(viewModel.inventoryProductsCount)", 
+                                    footnoteLeft: "Approved", 
+                                    footnoteRight: "of \(viewModel.inventoryProductsTotal) total", 
+                                    iconName: "shippingbox.fill", 
+                                    iconColor: .green, 
                                     iconBackground: .green.opacity(0.15)
                                 )
                             }
@@ -124,13 +115,13 @@ struct DashboardView: View {
                             
                             NavigationLink(destination: ManagersView()) {
                                 StatisticCard(
-                                    category: "Staffing",
-                                    title: "Managers",
-                                    value: "\(viewModel.staffingManagersCount)",
-                                    footnoteLeft: "Active",
-                                    footnoteRight: "of \(viewModel.staffingManagersTotal) total",
-                                    iconName: "person.2.fill",
-                                    iconColor: .orange,
+                                    category: "Staffing", 
+                                    title: "Managers", 
+                                    value: "\(viewModel.staffingManagersCount)", 
+                                    footnoteLeft: "Active", 
+                                    footnoteRight: "of \(viewModel.staffingManagersTotal) total", 
+                                    iconName: "person.2.fill", 
+                                    iconColor: .orange, 
                                     iconBackground: .orange.opacity(0.15)
                                 )
                             }
@@ -138,13 +129,13 @@ struct DashboardView: View {
                             
                             NavigationLink(destination: PromotionsView()) {
                                 StatisticCard(
-                                    category: "Marketing",
-                                    title: "Promos",
-                                    value: "\(viewModel.marketingPromosCount)",
-                                    footnoteLeft: "Live",
-                                    footnoteRight: "campaigns",
-                                    iconName: "tag.fill",
-                                    iconColor: .purple,
+                                    category: "Marketing", 
+                                    title: "Promos", 
+                                    value: "\(viewModel.marketingPromosCount)", 
+                                    footnoteLeft: "Live", 
+                                    footnoteRight: "campaigns", 
+                                    iconName: "tag.fill", 
+                                    iconColor: .purple, 
                                     iconBackground: .purple.opacity(0.15)
                                 )
                             }
@@ -174,7 +165,7 @@ struct DashboardView: View {
             .padding(.horizontal, 24)
             .padding(.top, 16)
         }
-        .background(Color.pageBG.ignoresSafeArea())
+        .background(Color(uiColor: .systemGroupedBackground))
         .task {
             await viewModel.load()
         }
@@ -184,7 +175,7 @@ struct DashboardView: View {
     private var bottomCardsView: some View {
         // 1. Retail Health Score
         ActivityCard(
-            title: "Retail Health Score",
+            title: "Retail Health Score", 
             subtitle: "NETWORK AVG"
         ) {
             VStack(spacing: 0) {
